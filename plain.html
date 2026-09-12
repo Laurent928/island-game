@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>这个游戏做成什么样 · 想听你的</title>
+<style>
+  :root{
+    --bg:#0b1a2b; --bg2:#102639; --card:#132c44; --card2:#183650;
+    --line:#26536f; --txt:#eaf2f8; --mut:#9ab4c9; --mut2:#71889c;
+    --acc:#e8c07d; --acc2:#d9a441; --soft:#4fd1c5;
+    --warn:#f6ad55; --ok:#68d391;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    margin:0;padding:0 0 calc(150px + env(safe-area-inset-bottom,0px));
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC",serif;
+    background:linear-gradient(180deg,#07121d 0%,var(--bg) 40%,var(--bg2) 100%);
+    background-attachment:fixed;color:var(--txt);line-height:1.85;font-size:16.5px;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:0 20px}
+  header{padding:40px 0 10px}
+  h1{font-size:27px;margin:0 0 14px;font-weight:700;line-height:1.4}
+  h1 .em{color:var(--acc)}
+
+  .lead{background:rgba(232,192,125,.09);border-left:3px solid var(--acc);
+    border-radius:0 12px 12px 0;padding:14px 18px;margin:18px 0 26px;font-size:15px;color:#dbe7f0}
+  .lead b{color:var(--acc)}
+
+  /* 世界的样子 */
+  .world{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:20px 22px;margin:0 0 34px;font-size:16px;line-height:2.0}
+  .world h2{margin:0 0 14px;font-size:16px;color:var(--soft);font-weight:600;letter-spacing:.5px}
+  .world p{margin:0 0 12px}
+  .world p:last-child{margin-bottom:0}
+  .world .last{color:var(--acc);font-weight:600}
+
+  /* 问题 */
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:20px 20px 16px;margin:0 0 18px}
+  .q.answered{border-color:rgba(232,192,125,.5);background:var(--card2)}
+  .q-n{font-size:12.5px;color:var(--acc);font-weight:700;letter-spacing:1px;margin-bottom:6px}
+  .q-t{font-size:19px;font-weight:650;margin:0 0 6px;line-height:1.6}
+  .q-h{font-size:14px;color:var(--mut2);margin:0 0 15px;line-height:1.7}
+
+  .opts{display:flex;flex-direction:column;gap:10px}
+  .opt{display:flex;gap:12px;align-items:flex-start;cursor:pointer;background:#0d2134;
+    border:1.5px solid #1f4560;border-radius:13px;padding:14px 16px;transition:all .15s;user-select:none}
+  .opt:hover{border-color:#33698a;background:#102a40}
+  .opt .mark{width:20px;height:20px;flex:0 0 20px;margin-top:3px;border-radius:50%;
+    border:1.8px solid #41718f;display:flex;align-items:center;justify-content:center;
+    font-size:12px;color:#102a40;font-weight:800;transition:all .15s}
+  .opt .l{font-size:16px;font-weight:600;line-height:1.6}
+  .opt .d{font-size:13.5px;color:var(--mut);margin-top:3px;line-height:1.65}
+  .opt.on{border-color:var(--acc);background:linear-gradient(135deg,rgba(232,192,125,.13),rgba(232,192,125,.04))}
+  .opt.on .mark{background:var(--acc);border-color:var(--acc)}
+
+  textarea{width:100%;background:#0d2134;border:1.5px solid #1f4560;border-radius:12px;
+    color:var(--txt);padding:12px 14px;font-size:15px;font-family:inherit;
+    resize:vertical;min-height:74px;line-height:1.75;margin-top:12px}
+  textarea:focus{outline:none;border-color:var(--acc)}
+  input[type=text]{width:100%;background:#0d2134;border:1.5px solid #1f4560;border-radius:12px;
+    color:var(--txt);padding:12px 14px;font-size:16px;font-family:inherit}
+  input[type=text]:focus{outline:none;border-color:var(--acc)}
+  .note-tip{font-size:12.5px;color:var(--mut2);margin:7px 0 0}
+
+  .bar{position:sticky;top:0;z-index:50;background:rgba(7,18,29,.94);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:10px 0}
+  .bar .wrap{display:flex;align-items:center;gap:14px}
+  .track{flex:1;height:7px;background:#0a1d2e;border-radius:99px;overflow:hidden;border:1px solid #1d3d57}
+  .fill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--acc2),var(--acc));transition:width .3s}
+  .cnt{font-size:13px;color:var(--mut);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+  .actions{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(7,18,29,.96);
+    backdrop-filter:blur(10px);border-top:1px solid var(--line);
+    padding:12px 0 calc(12px + env(safe-area-inset-bottom,0px))}
+  .actions .wrap{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  button{font-family:inherit;font-size:15px;font-weight:650;cursor:pointer;border-radius:12px;
+    padding:12px 22px;border:1.5px solid transparent;transition:all .15s}
+  .b-main{background:linear-gradient(135deg,var(--acc2),var(--acc));color:#20160a}
+  .b-main:hover{filter:brightness(1.07)}
+  .b-ghost{background:transparent;border-color:#2f5f7d;color:var(--mut)}
+  .b-ghost:hover{border-color:var(--acc);color:var(--acc)}
+  .hint{color:var(--mut2);font-size:12.5px;flex:1;min-width:120px}
+
+  #result{display:none;margin-top:34px;background:var(--card);border:1px solid rgba(232,192,125,.4);
+    border-radius:16px;padding:20px}
+  #result h3{margin:0 0 8px;font-size:18px;color:var(--acc)}
+  #out{width:100%;min-height:300px;font-size:13px;font-family:ui-monospace,Consolas,monospace;
+    line-height:1.7;white-space:pre;overflow-x:auto;background:#0d2134;border:1.5px solid #1f4560;
+    border-radius:12px;color:var(--txt);padding:12px 14px;resize:vertical}
+  .r-btns{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .copied{color:var(--ok);font-size:13.5px;align-self:center}
+  footer{text-align:center;color:var(--mut2);font-size:12.5px;margin:46px 0 12px;line-height:1.9}
+  @media (max-width:520px){
+    h1{font-size:22px}
+    .q-t{font-size:17.5px}
+    .wrap{padding:0 15px}
+    body{font-size:16px}
+  }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="wrap">
+    <div class="track"><div class="fill" id="fill"></div></div>
+    <div class="cnt" id="cnt">0 / 8</div>
+  </div>
+</div>
+
+<header class="wrap">
+  <h1>这个游戏做成什么样 · <span class="em">想听你的</span></h1>
+
+  <div class="lead">
+    <b>先说一句</b>：上次那个网页做得像在填表格，是我的问题。而且你说得对——里面那套「撤离 / 抢收」的说法确实像搜打撤，跟我们这个世界不搭。<br>
+    这一版重新说一遍，用的是大白话。<b>只有 8 个问题</b>，<b>每一题都可以不答</b>，也可以只写你自己的想法。
+  </div>
+
+  <div class="world">
+    <h2>先看一眼这个世界（想确认我记得对不对）</h2>
+    <p>你是一艘小船的船长。海面下是一座座岛屿，每一座都有两个面——现在这个面，和它翻过去之后的那一面。</p>
+    <p>你靠岸，见到人，知道他们的事。然后你要决定：帮他们，还是拿走你想要的东西。</p>
+    <p>你每动一次手，这座岛都在变得更不稳。不稳到某个程度，它会翻过去。</p>
+    <p>翻过去之后，同一个地方变成完全不同的世界——路还是那些路，但什么都不一样了。</p>
+    <p class="last">而这一切，会有人记得。</p>
+  </div>
+</header>
+
+<main class="wrap" id="app"></main>
+
+<div class="actions">
+  <div class="wrap">
+    <button class="b-main" id="gen">生成我的回答</button>
+    <button class="b-ghost" id="selall">全选文字</button>
+    <button class="b-ghost" id="reset">清空</button>
+    <span class="hint" id="hint">答完之后，把结果发给他就行</span>
+  </div>
+</div>
+
+<footer class="wrap">
+  这份不是考卷 —— 选什么都不算错，写到一半就睡也行。
+</footer>
+
+<script>
+/* =========================================================
+   八个问题
+   ========================================================= */
+const QUESTIONS = [
+  { id:'q1', t:'玩家一路走下来，更像什么？',
+    h:'不用想系统，就想"玩起来是什么感觉"。',
+    opts:[
+      ['drama','一部连续剧','一章接一章，剧情推着你往前走'],
+      ['travel','一次旅行','想去哪去哪，故事在路上自己长出来'],
+      ['both','两者都要','主线拉着你走，但每座岛可以慢慢逛']
+    ] },
+
+  { id:'q2', t:'打怪这件事，你希望它是什么？',
+    h:'这两种做法会长成很不一样的游戏，所以想确认一下。',
+    opts:[
+      ['gate','为了过关','战斗是路上的一道坎，过去了就往前'],
+      ['grind','本身就是好玩','我可以为了一套装备，在同一片地方待一晚上'],
+      ['both','都要','打得爽，同时也推进故事']
+    ] },
+
+  { id:'q3', t:'玩家做错选择，你希望他后悔吗？',
+    h:'比如他为了拿材料，让一座岛的人没了家。',
+    opts:[
+      ['never','希望他后悔，而且改不回来','世界真的会记住这件事'],
+      ['reset','希望他后悔，但可以重开','有分量，但不至于太狠'],
+      ['light','不太重要','故事好看就行，不用给玩家压力']
+    ] },
+
+  { id:'q4', t:'你希望玩家在游戏里，大部分时间在做什么？',
+    h:'这个会决定我们把力气花在哪里。',
+    opts:[
+      ['explore','在逛、在发现','看风景、找人说话、翻出藏在角落的东西'],
+      ['fight','在打、在变强','练级、拿装备、打更强的对手'],
+      ['half','一半一半','两边都不亏待']
+    ] },
+
+  { id:'q5', t:'结局你要几个？',
+    h:'你之前说过想要更多结局，我想再确认一次——多做一个是真要多写很多。',
+    opts:[
+      ['one','一个大结局','把所有东西都收在那一个里面，讲透'],
+      ['few','两三个','看玩家的选择走到哪一个'],
+      ['many','很多个','怎么玩都有不一样的收尾']
+    ] },
+
+  { id:'q6', t:'序章里，必须有哪个角色出现？',
+    h:'这个你说了算，我不替你挑。如果你心里有名字，写下来就行。',
+    free:true,
+    ph:'比如：主角的师傅 / 一个不说话的旅人 / 岛上一个唱歌的人 / 你自己想的那个人……',
+    opts:[
+      ['has','我心里有人了，写在下面',''],
+      ['open','我还没想好，你先给我几个候选','']
+    ] },
+
+  { id:'q7', t:'你希望玩家玩完，最想跟别人说哪句话？',
+    h:'就是那种忍不住想发给朋友的。可以选一个，也可以自己写。',
+    opts:[
+      ['flip','"那个翻面的设定太绝了"',''],
+      ['char','"XX 那个角色我到现在还想着"',''],
+      ['fight','"打起来太爽了，我又刷了一晚上"',''],
+      ['story','"结局那一段我没忍住"',''],
+      ['other','都不是，我想说的是别的（写在下面）','']
+    ] },
+
+  { id:'q8', t:'你觉得做多久，是可以接受的？',
+    h:'不是问你每周能花多少时间——是问你心里能等多久。',
+    opts:[
+      ['y1','一年左右','先做一个能玩的一小段，玩到了再往上加'],
+      ['y3','两三年','做得更完整一点，我愿意等'],
+      ['slow','不急，慢慢做','做到满意为止']
+    ] }
+];
+
+const KEY = 'plain_questions_v1';
+const state = { name:'', answers:{}, notes:{} };
+
+const app = document.getElementById('app');
+function el(tag, cls, html){ const e=document.createElement(tag); if(cls) e.className=cls; if(html!==undefined) e.innerHTML=html; return e; }
+function q(id){ return document.getElementById(id); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function answerOf(id){ return state.answers[id] || null; }
+function labelOf(id, val){
+  const Q = QUESTIONS.filter(function(x){ return x.id===id; })[0];
+  if(!Q) return val;
+  const o = Q.opts.filter(function(x){ return x[0]===val; })[0];
+  return o ? (o[1] || val) : val;
+}
+
+/* =========================================================
+   渲染
+   ========================================================= */
+function render(){
+  app.innerHTML = '';
+
+  /* 名字（选填） */
+  const nameBox = el('div','q');
+  nameBox.innerHTML = '<div class="q-n">先留个名字（选填）</div>' +
+    '<input type="text" id="who" placeholder="你叫什么都行" value="' + esc(state.name) + '">';
+  app.appendChild(nameBox);
+
+  QUESTIONS.forEach(function(Q, idx){
+    const card = el('div','q' + (answerOf(Q.id) ? ' answered' : ''));
+    card.id = 'card-' + Q.id;
+    card.innerHTML = '<div class="q-n">第 ' + (idx+1) + ' 问</div>' +
+      '<div class="q-t">' + esc(Q.t) + '</div>' +
+      '<div class="q-h">' + esc(Q.h) + '</div>';
+
+    const box = el('div','opts');
+    Q.opts.forEach(function(o){
+      const d = el('div','opt' + (answerOf(Q.id)===o[0] ? ' on' : ''));
+      d.setAttribute('data-opt', Q.id + ':' + o[0]);
+      d.innerHTML = '<div class="mark"></div><div><div class="l">' + esc(o[1]) + '</div>' +
+        (o[2] ? '<div class="d">' + esc(o[2]) + '</div>' : '') + '</div>';
+      d.addEventListener('click', function(){
+        state.answers[Q.id] = (answerOf(Q.id) === o[0]) ? null : o[0];
+        if (!state.answers[Q.id]) delete state.answers[Q.id];
+        save(); render();
+      });
+      box.appendChild(d);
+    });
+    card.appendChild(box);
+
+    /* 想法框：永远显示（她可以直接写，不必先选） */
+    const ta = document.createElement('textarea');
+    ta.id = 'note-' + Q.id;
+    ta.setAttribute('data-note', Q.id);
+    ta.placeholder = Q.free ? Q.ph : '想说什么都行（选填）——不同意某个选项、想加一个条件、或者想到了别的';
+    ta.value = state.notes[Q.id] || '';
+    ta.addEventListener('input', function(){
+      state.notes[Q.id] = ta.value; save(); updateBar();
+    });
+    card.appendChild(ta);
+    card.appendChild(el('div','note-tip','这一栏是选填的，但如果你想说的和选项不一样，写在这里最重要。'));
+
+    app.appendChild(card);
+  });
+
+  const n = q('who');
+  if (n) n.addEventListener('input', function(){ state.name = n.value; save(); });
+
+  /* 结果区 */
+  const r = el('div'); r.id = 'result';
+  r.innerHTML = '<h3>你的回答</h3>' +
+    '<p style="color:var(--mut);font-size:14px;margin:0 0 10px">' +
+      '点「复制」整段发给他就好。手机如果复制没反应，点「全选文字」再长按拷贝。</p>' +
+    '<textarea id="out" readonly></textarea>' +
+    '<div class="r-btns">' +
+      '<button class="b-main" id="copy">复制</button>' +
+      '<button class="b-ghost" id="dl">下载成 txt</button>' +
+      '<span class="copied" id="copied"></span>' +
+    '</div>';
+  app.parentNode.insertBefore(r, document.querySelector('footer'));
+  updateBar();
+}
+
+/* =========================================================
+   进度 / 存档 / 生成
+   ========================================================= */
+function updateBar(){
+  let done = 0;
+  QUESTIONS.forEach(function(Q){
+    const hasAns = !!answerOf(Q.id);
+    const hasNote = (state.notes[Q.id] || '').trim() !== '';
+    if (hasAns || hasNote) done++;
+  });
+  const pct = Math.round(done / QUESTIONS.length * 100);
+  q('fill').style.width = pct + '%';
+  q('cnt').textContent = done + ' / ' + QUESTIONS.length;
+  const h = q('hint');
+  if (h) h.textContent = done === 0 ? '答完之后，把结果发给他就行'
+    : (done < QUESTIONS.length ? '答到哪算哪，随时可以生成' : '答完啦，点左边生成');
+}
+
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if (raw){ const d = JSON.parse(raw);
+      if (d.name) state.name = d.name;
+      if (d.answers) state.answers = d.answers;
+      if (d.notes) state.notes = d.notes;
+    }
+  }catch(e){}
+}
+
+function build(){
+  const d = new Date();
+  const p = function(n){ return String(n).padStart(2,'0'); };
+  let out = '【这个游戏做成什么样 · 我的想法】\n';
+  out += '时间：' + d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + '\n';
+  if (state.name.trim()) out += '名字：' + state.name.trim() + '\n';
+  out += '————————————————\n\n';
+
+  QUESTIONS.forEach(function(Q, i){
+    const a = answerOf(Q.id);
+    const nt = (state.notes[Q.id] || '').trim();
+    if (!a && !nt) { out += '第 ' + (i+1) + ' 问 · ' + Q.t + '\n  （没答）\n\n'; return; }
+    out += '第 ' + (i+1) + ' 问 · ' + Q.t + '\n';
+    out += '  → ' + (a ? labelOf(Q.id, a) : '（没选，只写了想法）') + '\n';
+    if (nt) out += '  〔我想说〕' + nt.replace(/\s*\n\s*/g, ' ／ ') + '\n';
+    out += '\n';
+  });
+
+  out += '————————————————\n（把这段整段发给他就行）\n';
+  return out;
+}
+
+/* =========================================================
+   事件
+   ========================================================= */
+q('gen').addEventListener('click', function(){
+  q('out').value = build();
+  q('result').style.display = 'block';
+  q('result').scrollIntoView({behavior:'smooth', block:'start'});
+  try{ const ta=q('out'); ta.focus({preventScroll:true}); ta.select(); ta.setSelectionRange(0,999999); }catch(e){}
+});
+q('selall').addEventListener('click', function(){
+  const ta=q('out'); if(!ta.value){ q('gen').click(); }
+  try{ ta.focus(); ta.select(); ta.setSelectionRange(0,999999); }catch(e){}
+});
+q('reset').addEventListener('click', function(){
+  if(!confirm('清空所有回答，重新开始？')) return;
+  state.name=''; state.answers={}; state.notes={};
+  try{ localStorage.removeItem(KEY); }catch(e){}
+  render();
+});
+document.addEventListener('click', function(e){
+  const id = e.target && e.target.id;
+  if (id === 'copy'){
+    const ta = q('out'); if(!ta.value) q('gen').click();
+    let ok=false;
+    try{
+      ta.removeAttribute('readonly'); ta.select(); ta.setSelectionRange(0,999999);
+      ok = document.execCommand('copy'); ta.setAttribute('readonly','readonly');
+    }catch(err){ ok=false; }
+    if (!ok && navigator.clipboard){
+      navigator.clipboard.writeText(ta.value).then(function(){ q('copied').textContent='已复制'; })
+        .catch(function(){ q('copied').textContent='请点「全选文字」再长按拷贝'; });
+    } else {
+      q('copied').textContent = ok ? '已复制' : '请点「全选文字」再长按拷贝';
+    }
+    setTimeout(function(){ q('copied').textContent=''; }, 2800);
+  }
+  if (id === 'dl'){
+    const blob = new Blob(['\ufeff' + q('out').value], {type:'text/plain;charset=utf-8'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '我的想法.txt';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+});
+
+load();
+render();
+</script>
+</body>
+</html>
