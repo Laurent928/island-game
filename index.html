@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>底层核心玩法 · 四方案对比与投票</title>
+<style>
+  :root{
+    --bg:#0b1a2b; --bg2:#0f2438; --card:#132c44; --card2:#17344f;
+    --line:#24506f; --txt:#e8f1f8; --mut:#93b0c8; --mut2:#6d8ba5;
+    --acc:#4fd1c5; --acc2:#38b2ac; --warn:#f6ad55; --sand:#f0d9a8;
+    --ok:#68d391; --bad:#fc8181; --dev:#9AD7E8; --art:#F0B7D8;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    margin:0;padding:0 0 calc(150px + env(safe-area-inset-bottom,0px));
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+    background:linear-gradient(180deg,#08131f 0%,var(--bg) 35%,var(--bg2) 100%);
+    background-attachment:fixed;color:var(--txt);line-height:1.7;font-size:16px;
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:0 18px}
+  h1{font-size:26px;margin:0 0 10px;font-weight:700}
+  h1 .em{color:var(--acc)}
+  .sub{color:var(--mut);font-size:14.5px;margin:0 0 6px}
+  header{padding:34px 0 18px}
+
+  .box{background:linear-gradient(135deg,rgba(79,209,197,.10),rgba(79,209,197,.03));
+    border:1px solid rgba(79,209,197,.28);border-radius:14px;padding:15px 17px;font-size:14.5px;margin:16px 0}
+  .box b{color:var(--acc)}
+  .box ul{margin:8px 0 0;padding-left:20px;color:var(--mut)}
+  .box li{margin:3px 0}
+
+  /* 导航 */
+  .bar{position:sticky;top:0;z-index:50;background:rgba(8,19,31,.93);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:9px 0}
+  .bar .wrap{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .navlink{font-size:13px;color:var(--mut);text-decoration:none;padding:4px 9px;border-radius:7px;border:1px solid transparent}
+  .navlink:hover{color:var(--acc);border-color:#2b5470}
+
+  section{margin:34px 0 0}
+  .sec-h{display:flex;align-items:center;gap:11px;margin:0 0 6px}
+  .sec-n{width:30px;height:30px;flex:0 0 30px;border-radius:9px;
+    background:linear-gradient(135deg,var(--acc2),#2c7a7b);color:#04212a;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px}
+  .sec-h h2{margin:0;font-size:19px}
+  .sec-d{color:var(--mut2);font-size:13.5px;margin:0 0 14px 41px}
+
+  /* 方案卡 */
+  .sch{background:var(--card);border:1px solid var(--line);border-radius:15px;margin:0 0 14px;overflow:hidden}
+  .sch-head{padding:15px 17px;cursor:pointer;display:flex;align-items:center;gap:11px}
+  .sch-id{width:30px;height:30px;flex:0 0 30px;border-radius:9px;background:#1d4258;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:var(--acc)}
+  .sch-title{flex:1;font-size:16.5px;font-weight:650}
+  .sch-title small{display:block;font-size:13px;color:var(--mut);font-weight:400;margin-top:2px}
+  .chev{color:var(--mut2);font-size:13px;transition:transform .18s}
+  .sch.open .chev{transform:rotate(180deg)}
+  .sch-body{display:none;padding:0 17px 16px;border-top:1px solid var(--line)}
+  .sch.open .sch-body{display:block}
+  .kv{display:grid;grid-template-columns:88px 1fr;gap:6px 12px;font-size:14px;margin:12px 0 0}
+  .kv dt{color:var(--mut2);font-size:13px}
+  .kv dd{margin:0}
+  .pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .pill{font-size:12px;padding:2px 9px;border-radius:99px;border:1px solid}
+  .pill.good{color:var(--ok);border-color:rgba(104,211,145,.4);background:rgba(104,211,145,.1)}
+  .pill.mid{color:var(--warn);border-color:rgba(246,173,85,.4);background:rgba(246,173,85,.1)}
+  .pill.info{color:var(--acc);border-color:rgba(79,209,197,.4);background:rgba(79,209,197,.1)}
+
+  /* 评分 */
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:9px 8px;border-bottom:1px solid #1d3d57;text-align:left;vertical-align:middle}
+  th{color:var(--mut2);font-size:12.5px;font-weight:600;text-align:left}
+  td.num{text-align:center;white-space:nowrap}
+  .rate{display:inline-flex;gap:5px}
+  .dot{width:30px;height:30px;border-radius:8px;border:1.5px solid #2f5f7d;background:#0e2337;
+    color:var(--mut);font-size:13px;font-weight:700;cursor:pointer;transition:all .12s}
+  .dot:hover{border-color:#4a86a8}
+  .dot.on{background:var(--acc);border-color:var(--acc);color:#04212a}
+  .other{font-size:12.5px;color:var(--mut);white-space:nowrap}
+  .diff-row{background:rgba(246,173,85,.09)}
+  .agree-row{background:rgba(104,211,145,.07)}
+
+  .badge{font-size:11.5px;padding:2px 8px;border-radius:99px;white-space:nowrap}
+  .badge.ok{color:var(--ok);background:rgba(104,211,145,.13);border:1px solid rgba(104,211,145,.35)}
+  .badge.no{color:var(--warn);background:rgba(246,173,85,.13);border:1px solid rgba(246,173,85,.35)}
+
+  /* 选项按钮组 */
+  .opts{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+  .opt{display:flex;gap:11px;align-items:flex-start;cursor:pointer;background:#0e2337;
+    border:1.5px solid #1e4159;border-radius:11px;padding:11px 13px;transition:all .14s;user-select:none}
+  .opt:hover{border-color:#2f6a8c;background:#112a41}
+  .opt .mark{width:19px;height:19px;flex:0 0 19px;margin-top:2px;border-radius:50%;
+    border:1.8px solid #3d6c8c;display:flex;align-items:center;justify-content:center;
+    font-size:12px;color:#04212a;font-weight:800}
+  .opt.on{border-color:var(--acc);background:linear-gradient(135deg,rgba(79,209,197,.16),rgba(79,209,197,.05))}
+  .opt.on .mark{background:var(--acc);border-color:var(--acc)}
+  .opt .l{font-size:14.5px;font-weight:600}
+  .opt .d{font-size:12.5px;color:var(--mut);margin-top:2px}
+
+  /* 滑块 */
+  .mix{margin:14px 0 0}
+  .mix-row{display:grid;grid-template-columns:72px 1fr 46px;gap:10px;align-items:center;margin:8px 0}
+  .mix-row label{font-size:13.5px;color:var(--mut)}
+  input[type=range]{width:100%;accent-color:var(--acc)}
+  .mix-val{font-size:14px;font-weight:700;text-align:right;color:var(--acc)}
+  .mix-note{font-size:12.5px;color:var(--mut2);margin-top:6px}
+
+  /* 身份 */
+  .roles{display:flex;gap:10px;flex-wrap:wrap}
+  .role{flex:1;min-width:150px;padding:12px 14px;border-radius:12px;border:1.5px solid #1e4159;
+    background:#0e2337;cursor:pointer;text-align:center;transition:all .14s}
+  .role:hover{border-color:#2f6a8c}
+  .role.on{border-color:var(--acc);background:linear-gradient(135deg,rgba(79,209,197,.16),rgba(79,209,197,.05))}
+  .role .rn{font-weight:700;font-size:15px}
+  .role .rd{font-size:12.5px;color:var(--mut);margin-top:3px}
+
+  /* 结果 */
+  #result{display:none;margin-top:30px;background:var(--card);border:1px solid rgba(79,209,197,.35);
+    border-radius:15px;padding:18px}
+  #result h3{margin:0 0 8px;font-size:17px;color:var(--acc)}
+  #out{width:100%;min-height:280px;font-size:12.5px;font-family:ui-monospace,Consolas,monospace;
+    line-height:1.65;white-space:pre;overflow-x:auto;background:#0e2337;border:1.5px solid #1e4159;
+    border-radius:11px;color:var(--txt);padding:11px 13px;resize:vertical}
+  .r-btns{display:flex;gap:9px;margin-top:11px;flex-wrap:wrap}
+  .copied{color:var(--ok);font-size:13px;align-self:center}
+
+  .cmp{background:var(--card2);border:1px solid rgba(79,209,197,.35);border-radius:14px;
+    padding:14px 16px;margin:14px 0;font-size:14px}
+  .cmp h4{margin:0 0 8px;font-size:15px;color:var(--acc)}
+  .cmp .li{margin:4px 0;font-size:13.5px}
+
+  /* 底部操作 */
+  .actions{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(8,19,31,.95);
+    backdrop-filter:blur(10px);border-top:1px solid var(--line);
+    padding:12px 0 calc(12px + env(safe-area-inset-bottom,0px))}
+  .actions .wrap{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  button{font-family:inherit;font-size:14.5px;font-weight:650;cursor:pointer;border-radius:11px;
+    padding:11px 20px;border:1.5px solid transparent;transition:all .15s}
+  .b-main{background:linear-gradient(135deg,var(--acc2),var(--acc));color:#04212a}
+  .b-main:hover{filter:brightness(1.08)}
+  .b-ghost{background:transparent;border-color:#2b5470;color:var(--mut)}
+  .b-ghost:hover{border-color:var(--acc);color:var(--acc)}
+  .hint{color:var(--mut2);font-size:12.5px;flex:1;min-width:140px}
+  footer{text-align:center;color:var(--mut2);font-size:12.5px;margin:40px 0 10px}
+  @media (max-width:560px){
+    h1{font-size:21px}
+    .kv{grid-template-columns:1fr;gap:2px 0}
+    .kv dt{margin-top:8px}
+    .wrap{padding:0 13px}
+    .dot{width:28px;height:28px}
+  }
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <h1>底层核心玩法 · <span class="em">四方案对比与投票</span></h1>
+  <p class="sub">Demo 范围：<b>2 座岛</b>（老家 + 展示岛）+ <b>1–2 个职业</b>。这里要定的，是串起这两座岛的<b>底层循环</b>。</p>
+
+  <div class="box">
+    <b>一句话先给结论：你俩的分歧不需要折中。</b>
+    <ul>
+      <li>"战斗刷刷刷"和"电影化叙事"看起来像一道<b>时间分配题</b>——但其实不是。</li>
+      <li>真正的区别是：<b>什么是那个"让人想再来一次的单元"</b>。</li>
+      <li>刷刷刷需要一个<b>可重复</b>的单元；电影化叙事需要<b>不可重复</b>的时刻。</li>
+      <li>而你们的<b>翻面</b>恰好两边都占：世界状态切换＝可重复（同一张地图两份内容），灾难与抉择＝不可重复。</li>
+      <li>所以下面四个方案，区别其实是：<b>翻面在这个循环里处于什么位置。</b></li>
+    </ul>
+  </div>
+
+  <div class="box" style="border-color:rgba(246,173,85,.35);background:rgba(246,173,85,.07)">
+    <b>先看清一个 demo 现实</b>
+    <ul>
+      <li>在 60–120 分钟、2 座岛的 demo 里，<b>做不出"练级到 99"式的刷</b>（那需要 40 小时内容量）。</li>
+      <li>所以 demo 的"刷"应该是：<b>短周期</b>（每次 10–20 分钟）、<b>高变化</b>（敌人组合不同）、<b>带决策</b>（要不要撤）。</li>
+      <li>也就是 <b>roguelite 式"远征"</b>，不是 MMO 式"练级"。</li>
+      <li>附带：你们已定<b>指令式战斗</b>（最省的选择）。它重复起来容易腻——方案 C 恰好是"让指令式战斗值得刷"的机制。</li>
+    </ul>
+  </div>
+</header>
+
+<div class="bar">
+  <div class="wrap">
+    <a class="navlink" href="#s1">① 四方案</a>
+    <a class="navlink" href="#s2">② 评分与排序</a>
+    <a class="navlink" href="#s3">③ 合成方案</a>
+    <a class="navlink" href="#s4">④ 两座岛</a>
+    <a class="navlink" href="#s5">⑤ 职业</a>
+    <span class="hint" id="prog" style="margin-left:auto"></span>
+  </div>
+</div>
+
+<main class="wrap" id="app"></main>
+
+<div class="actions">
+  <div class="wrap">
+    <button class="b-main" id="gen">✨ 生成结果与回传链接</button>
+    <button class="b-ghost" id="selall">🖐 全选</button>
+    <button class="b-ghost" id="reset">清空</button>
+    <span class="hint" id="hint">各自评一遍，然后把结果发给对方</span>
+  </div>
+</div>
+
+<footer class="wrap">这份页面对双方都成立 —— 选什么都不算"错"。</footer>
+
+<script>
+/* =========================================================
+   数据
+   ========================================================= */
+const SCHEMES = [
+  { id:'A', name:'翻面驱动 · 远征',
+    tag:'每次翻面＝一次远征',
+    loop:'接委托 → 备战（装备/符文/船员）→ 进入岛屿 → 在翻面倒计时内达成目标 → 翻面发生 → 世界状态改变 → 新资源新敌人 → 再来',
+    unit:'一次远征（10–20 分钟）',
+    varied:'翻面后同一座岛变成另一套生态 / 敌人 / 资源表——同样的地图，两份内容',
+    play:'目标多样：抢资源（贪）／救人（善）／稳定（智）／催化（恶）／打霸主（力）——同一个系统，五种动机',
+    story:'每次翻面都是事件：有前兆、有抉择、有不可逆后果',
+    cost:'中（需要倒计时系统 + 备战系统）',
+    risk:'翻面周期要做成"可玩节奏"：太慢刷不了，太快叙事没时间铺',
+    demo:'高',
+    playLevel:2, storyLevel:2 },
+
+  { id:'B', name:'航线驱动 · 航段',
+    tag:'航线就是时间轴',
+    loop:'选航线 → 航行事件（战斗/抉择/发现）→ 抵达岛屿 → 岛屿任务 → 回港 → 新航线',
+    unit:'一次航段（5–15 分钟）',
+    varied:'航线上的随机事件（海怪/风暴/浮岛/漂流物）+ 抵达后的岛屿任务',
+    play:'航行事件可重复刷（海怪、资源点），但深度有限，需要事件表支撑',
+    story:'结构最清晰、天然章节化；演出集中放在"关键抵达"，性价比最高',
+    cost:'最低（最像八方旅人，最容易做）',
+    risk:'⚠️ 航行若做成过场就完全没得刷——必须做成"节点式 + 事件表"',
+    demo:'最高',
+    playLevel:1, storyLevel:2 },
+
+  { id:'C', name:'平衡度驱动 · 代价',
+    tag:'刷得越狠，世界越接近翻面',
+    loop:'战斗/施法 → 消耗本地能量 → 岛屿平衡度下降 → 生态失控/敌人变强 → 必须撤离或稳定 → 翻面 → 新状态',
+    unit:'一次"探索 → 消耗 → 撤离"（10–20 分钟）',
+    varied:'玩家自己的行为在改变世界——同一个岛，因为你上次刷得狠，这次已经不一样了',
+    play:'"越刷越危险"制造真正的风险回报张力——这才是让人想"再刷一次"的东西',
+    story:'机制即主题：玩家的贪婪被直接写进世界状态。设定里"人类的手段本身在加速灾难"变成了可操作的规则',
+    cost:'中高（数值平衡比 A/B 难）',
+    risk:'⚠️ 只有惩罚没有解压阀就会变成负担——必须给"稳定/撤离/庇护"作为解压阀',
+    demo:'中（但最能展示世界观的独特性）',
+    playLevel:3, storyLevel:3 },
+
+  { id:'D', name:'日志驱动 · 记录',
+    tag:'知识就是进度',
+    loop:'探索 → 记录（海图/图鉴/怪物弱点）→ 获得锚定与情报 → 解锁新航线与打法 → 探索更深',
+    unit:'一次"发现"（1–5 分钟，可以很碎）',
+    varied:'收集与解锁；知识本身就是进度',
+    play:'收集型刷刷刷（图鉴全收、资源采集、词条解锁）',
+    story:'玩家写下的字就是叙事；"航海日志"是密度最高、成本最低的叙事载体',
+    cost:'低（已是既定方向：知识型进度为主轴）',
+    risk:'⚠️ 单靠它会很"安静"，需要战斗与演出配合',
+    demo:'高',
+    playLevel:2, storyLevel:2 }
+];
+
+const MIX_DEFAULT = { battle:50, explore:25, story:25 };
+
+const my = {
+  role: null,
+  rate: { A:{f:0,n:0}, B:{f:0,n:0}, C:{f:0,n:0}, D:{f:0,n:0} },
+  rank: { A:0, B:0, C:0, D:0 },
+  synth: null, mix: Object.assign({}, MIX_DEFAULT),
+  islands: null, jobs: null, timer: null
+};
+
+let other = null;   // 对方通过回传链接载入的答案
+
+const KEY = 'gameplay_vote_v1';
+const ROLE_NAME = { dev:'程序侧', art:'创作侧' };
+
+/* =========================================================
+   工具
+   ========================================================= */
+const app = document.getElementById('app');
+function el(tag, cls, html){ const e=document.createElement(tag); if(cls) e.className=cls; if(html!==undefined) e.innerHTML=html; return e; }
+function q(id){ return document.getElementById(id); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* =========================================================
+   渲染
+   ========================================================= */
+function section(n, title, desc){
+  const s = el('section');
+  const h = el('div','sec-h');
+  h.appendChild(el('div','sec-n', n));
+  h.appendChild(el('h2', null, title));
+  s.appendChild(h);
+  if (desc) s.appendChild(el('p','sec-d', desc));
+  return s;
+}
+
+function render(){
+  app.innerHTML = '';
+
+  /* ---- 身份 ---- */
+  const s0 = section('★','先选你是谁','这一页两个人都会打开，各评一遍；选好身份后，对方打开你的链接时页面会自动标出一致与分歧。');
+  const roles = el('div','roles');
+  [['dev','程序侧','实现 / 数值 / 系统'],['art','创作侧','世界观 / 美术 / 文案 / 体验']].forEach(function(r){
+    const d = el('div','role'+(my.role===r[0]?' on':''));
+    d.innerHTML = '<div class="rn">'+r[1]+'</div><div class="rd">'+r[2]+'</div>';
+    d.addEventListener('click', function(){ my.role = r[0]; save(); render(); });
+    roles.appendChild(d);
+  });
+  s0.appendChild(roles);
+  app.appendChild(s0);
+
+  /* ---- 四方案 ---- */
+  const s1 = section('①','四个方案','点标题展开细节。核心区别只有一个：循环的"心脏"是什么。');
+  SCHEMES.forEach(function(s){
+    const card = el('div','sch');
+    const head = el('div','sch-head');
+    head.innerHTML = '<div class="sch-id">'+s.id+'</div>' +
+      '<div class="sch-title">'+esc(s.name)+'<small>'+esc(s.tag)+'</small></div>' +
+      '<div class="chev">▼</div>';
+    head.addEventListener('click', function(){ card.classList.toggle('open'); });
+    card.appendChild(head);
+
+    const body = el('div','sch-body');
+    body.innerHTML =
+      '<dl class="kv">' +
+        '<dt>核心循环</dt><dd>'+esc(s.loop)+'</dd>' +
+        '<dt>重复单元</dt><dd>'+esc(s.unit)+'</dd>' +
+        '<dt>变化从哪来</dt><dd>'+esc(s.varied)+'</dd>' +
+        '<dt>可玩性</dt><dd>'+esc(s.play)+'</dd>' +
+        '<dt>叙事</dt><dd>'+esc(s.story)+'</dd>' +
+        '<dt>成本</dt><dd>'+esc(s.cost)+'</dd>' +
+        '<dt>风险</dt><dd>'+esc(s.risk)+'</dd>' +
+        '<dt>demo 可行性</dt><dd>'+esc(s.demo)+'</dd>' +
+      '</dl>' +
+      '<div class="pills">' +
+        '<span class="pill info">看它多能"刷"：'+'★'.repeat(s.playLevel)+'</span>' +
+        '<span class="pill info">看它多能"讲故事"：'+'★'.repeat(s.storyLevel)+'</span>' +
+      '</div>';
+    card.appendChild(body);
+    s1.appendChild(card);
+  });
+  app.appendChild(s1);
+
+  /* ---- 评分与排序 ---- */
+  const s2 = section('②','评分与排序','给每个方案打两个分：它能带来多少"想再玩一次"，能带来多少"故事密度"。0 = 完全不行，5 = 非常强。');
+  const t = el('table');
+  t.innerHTML = '<thead><tr><th>方案</th><th style="text-align:center">可玩性</th><th style="text-align:center">叙事密度</th>'+
+    (other? '<th style="text-align:center">对方</th>':'') + '<th>判断</th></tr></thead>';
+  const tb = el('tbody');
+  SCHEMES.forEach(function(s){
+    const tr = el('tr');
+    if (other){
+      const df = Math.abs((my.rate[s.id].f||0) - ((other.rate[s.id]||{}).f||0));
+      const dn = Math.abs((my.rate[s.id].n||0) - ((other.rate[s.id]||{}).n||0));
+      tr.className = (df>=2||dn>=2) ? 'diff-row' : ((my.rate[s.id].f&&my.rate[s.id].n)?'agree-row':'');
+    }
+    const td1 = el('td', null, '<b>'+s.id+'</b> '+esc(s.name.split('·')[1]||s.name));
+    const td2 = el('td','num'); td2.appendChild(rater(s.id,'f'));
+    const td3 = el('td','num'); td3.appendChild(rater(s.id,'n'));
+    tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
+    if (other){
+      const o = other.rate[s.id]||{f:0,n:0};
+      tr.appendChild(el('td','num', '<span class="other">刷 '+o.f+' / 叙 '+o.n+'</span>'));
+      const df = Math.abs((my.rate[s.id].f||0)-o.f), dn = Math.abs((my.rate[s.id].n||0)-o.n);
+      tr.appendChild(el('td', null, (df>=2||dn>=2) ? '<span class="badge no">分歧较大</span>' :
+        ((my.rate[s.id].f&&my.rate[s.id].n) ? '<span class="badge ok">接近</span>' : '<span class="other">未评</span>')));
+    } else {
+      tr.appendChild(el('td','num','<span class="other">—</span>'));
+    }
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+  s2.appendChild(t);
+
+  // 排序
+  const rk = el('div');
+  rk.innerHTML = '<h4 style="margin:20px 0 4px;font-size:15px">偏好排序</h4>' +
+    '<p class="sec-d" style="margin-left:0">给 4 个方案排个 1–4（1 = 最想要）。只是想看看你们的排序像不像。</p>';
+  const rtable = el('table');
+  let rhtml = '<thead><tr><th>方案</th><th style="text-align:center">你的排序</th>'+(other?'<th style="text-align:center">对方</th>':'')+'</tr></thead><tbody>';
+  SCHEMES.forEach(function(s){
+    rhtml += '<tr'+(other && my.rank[s.id] && other.rank && other.rank[s.id] && my.rank[s.id]!==other.rank[s.id] ? ' class="diff-row"':'')+'>'+
+      '<td><b>'+s.id+'</b></td><td class="num"><div class="rate" data-rank="'+s.id+'"></div></td>'+
+      (other? '<td class="num"><span class="other">'+((other.rank&&other.rank[s.id])||'—')+'</span></td>':'')+'</tr>';
+  });
+  rhtml += '</tbody>';
+  rtable.innerHTML = rhtml;
+  rk.appendChild(rtable);
+  s2.appendChild(rk);
+  app.appendChild(s2);
+  // 填充排序按钮
+  SCHEMES.forEach(function(s){
+    const box = rtable.querySelector('[data-rank="'+s.id+'"]');
+    if (!box) return;
+    for (let i=1;i<=4;i++){
+      const b = el('button','dot'+(my.rank[s.id]===i?' on':''), String(i));
+      b.addEventListener('click', function(){
+        // 互斥：同分给别的方案清掉
+        SCHEMES.forEach(function(o){ if (my.rank[o.id]===i) my.rank[o.id]=0; });
+        my.rank[s.id] = i; save(); render();
+      });
+      box.appendChild(b);
+    }
+  });
+
+  /* ---- 合成方案 ---- */
+  const s3 = section('③','合成方案','推荐：骨架用 B（航线）、心脏用 C（平衡度）、长线用 D（日志）、高潮用 A（翻面远征）。四个方案不是四选一——它们处在循环的不同层级。');
+  const synthBox = el('div','box','<b>为什么它能成立</b>：玩家沿<b>航线（B）</b>抵达一座岛，在岛上<b>探索与记录（D）</b>，用<b>战斗</b>解决问题——而每一次战斗都在<b>消耗这座岛的能量（C）</b>。当他消耗得够多，这座岛会<b>翻面（A）</b>。而翻面之后，<b>世界记得他做过什么</b>。<br>在这个结构里，"刷"和"剧情"不是两件事，而是同一件事的两面。');
+  s3.appendChild(synthBox);
+  s3.appendChild(optionGroup('synth','对合成方案的态度',[
+    ['accept','接受','就按 B+C+D+A 做 demo'],
+    ['tune','接受但想换心脏','骨架可以，但心脏不想要 C'],
+    ['reject','不接受','我想先只做一个方案']
+  ]));
+
+  // 配比滑块
+  const mixWrap = el('div','mix');
+  mixWrap.innerHTML = '<h4 style="margin:18px 0 2px;font-size:15px">Demo 配比（战斗 / 探索记录 / 叙事抉择）</h4>'+
+    '<p class="sec-d" style="margin-left:0">建议值 50 / 25 / 25。拖动即可，会自动保持总和 100。</p>';
+  [['battle','战斗'],['explore','探索记录'],['story','叙事抉择']].forEach(function(m){
+    const row = el('div','mix-row');
+    row.innerHTML = '<label>'+m[1]+'</label>'+
+      '<input type="range" min="0" max="100" step="5" value="'+my.mix[m[0]]+'" data-mix="'+m[0]+'">'+
+      '<div class="mix-val" id="mv-'+m[0]+'">'+my.mix[m[0]]+'%</div>';
+    mixWrap.appendChild(row);
+  });
+  mixWrap.appendChild(el('div','mix-note','注：关键不在配比，而在"叙事不是看演出，而是通过选择产生"——过场动画最贵，"因为你怎么打，所以故事变成这样"最便宜。'));
+  s3.appendChild(mixWrap);
+  app.appendChild(s3);
+  mixWrap.querySelectorAll('input[type=range]').forEach(function(inp){
+    inp.addEventListener('input', function(){
+      my.mix[inp.dataset.mix] = parseInt(inp.value,10);
+      // 把差额按比例分摊到另外两项
+      const keys = ['battle','explore','story'].filter(function(k){ return k!==inp.dataset.mix; });
+      let rest = 100 - my.mix[inp.dataset.mix];
+      const sum = keys.reduce(function(a,k){ return a+my.mix[k]; },0) || 1;
+      keys.forEach(function(k,i){
+        my.mix[k] = (i===keys.length-1) ? rest : Math.round(rest * (my.mix[k]/sum));
+        rest -= my.mix[k];
+      });
+      save();
+      keys.forEach(function(k){ var g=q('mv-'+k); if(g) g.textContent = my.mix[k]+'%'; });
+      q('mv-'+inp.dataset.mix).textContent = my.mix[inp.dataset.mix]+'%';
+      updateProg();
+    });
+  });
+
+  /* ---- 两座岛 ---- */
+  const s4 = section('④','两座岛怎么分工','把两种倾向各自主导一次，比"每座岛都五五开"更好——各自都有一个能证明自己的舞台。');
+  s4.appendChild(el('div','box',
+    '<b>岛 1 · 老家</b>（教学 + 情感锚点）：走动、战斗基础、第一次"安全的翻面"、1 个 NPC 关系。<br>'+
+    '配比 <b>叙事 40% / 战斗 35% / 探索 25%</b>。结尾：一次<b>玩家无法阻止</b>的小翻面 → 情感钩子，推动出海。<br><br>'+
+    '<b>岛 2 · 展示岛</b>（完整机制 + 可刷内容）：完整平衡度系统、可重复的远征（2–3 种目标）、可刷资源与敌人、<b>一次大翻面事件（3 种解法）</b>、1 个 boss、1 条支线、港口。<br>'+
+    '配比 <b>战斗 50% / 探索 25% / 叙事 25%</b>。结尾：玩家的选择<b>改变岛的状态且不会恢复</b> → "世界记得你做过什么"。'));
+  s4.appendChild(optionGroup('islands','这个分工你接受吗？',[
+    ['accept','接受','岛1 叙事主导、岛2 战斗主导'],
+    ['tune','想调整','配比或内容需要改'],
+    ['reject','不接受','两座岛应该是一样的结构']
+  ]));
+
+  /* ---- 职业 ---- */
+  const s5 = section('⑤','做 1 个还是 2 个职业','建议的两个职业不是"战士 vs 法师"的数值差异，而是<b>两种与世界的关系</b>。');
+  s5.appendChild(el('div','box',
+    '<b>职业 1 · 剑士</b>（强化自身漩涡）：低能量消耗、直接、成长清晰 → <b>改变自己</b>。服务于"刷起来有明确变强感"。<br><br>'+
+    '<b>职业 2 · 术士</b>（调用能量）：可施放影响<b>岛屿平衡度</b>的法术（抽取 / 稳定 / 催化）→ <b>改变世界</b>。玩家能直接操作世界状态，机制即叙事。<br><br>'+
+    '好处：两个职业的差异不是"哪个伤害高"，而是<b>"你要不要为力量负责"</b>——玩家选职业时，其实是在选立场。'));
+  s5.appendChild(optionGroup('jobs','职业方案',[
+    ['two','做 2 个，按剑士/术士划分','正好把两种倾向各放一个'],
+    ['one','只做 1 个 → 建议做术士','术士直接暴露这个世界最独特的东西'],
+    ['twoAlt','做 2 个，但换个划分','我有别的职业组合想法']
+  ]));
+
+  /* ---- 倒计时 ---- */
+  const s6 = section('⑥','一个具体机制：翻面倒计时','方案 A 和 C 都依赖"翻面倒计时"——它会给玩家时限压力。想确认一下这个能不能接受。');
+  s6.appendChild(optionGroup('timer','翻面倒计时',[
+    ['yes','能接受','有时限才有紧张感，这正是"刷"的张力来源'],
+    ['soft','可以但要软一点','给足预告和准备时间，不要突然袭击'],
+    ['no','不接受','不想在 demo 里加时限压力']
+  ]));
+
+  /* ---- 对方对比 ---- */
+  if (other){
+    const sc = section('⇄','对方的选择','这一节是对方通过回传链接带过来的答案。');
+    sc.appendChild(el('div','cmp', cmpHtml()));
+    app.appendChild(sc);
+  }
+
+  updateProg();
+}
+
+function rater(id, kind){
+  const box = el('div','rate');
+  for (let i=1;i<=5;i++){
+    const b = el('button','dot'+(my.rate[id][kind]===i?' on':''), String(i));
+    b.addEventListener('click', function(){
+      my.rate[id][kind] = (my.rate[id][kind]===i) ? 0 : i;
+      save(); render();
+    });
+    box.appendChild(b);
+  }
+  return box;
+}
+
+function optionGroup(key, title, opts){
+  const w = el('div');
+  w.appendChild(el('h4', null, '')).innerHTML = '';
+  const h = el('div', null, '<b style="font-size:15px">'+title+'</b>');
+  h.style.margin = '14px 0 2px';
+  w.appendChild(h);
+  const box = el('div','opts');
+  opts.forEach(function(o){
+    const d = el('div','opt'+(my[key]===o[0]?' on':''));
+    d.innerHTML = '<div class="mark"></div><div><div class="l">'+esc(o[1])+'</div>'+(o[2]?'<div class="d">'+esc(o[2])+'</div>':'')+'</div>';
+    d.addEventListener('click', function(){ my[key] = (my[key]===o[0]?null:o[0]); save(); render(); });
+    box.appendChild(d);
+  });
+  w.appendChild(box);
+  if (other && other[key] && my[key]){
+    const same = other[key]===my[key];
+    w.appendChild(el('div', null, '<div style="margin-top:8px"><span class="badge '+(same?'ok':'no')+'">'+
+      (same?'与对方一致':'与对方不同：对方选了「'+(labelOf(key,other[key]))+'」')+'</span></div>'));
+  }
+  return w;
+}
+function labelOf(key, val){
+  const map = {
+    synth:{accept:'接受',tune:'接受但想换心脏',reject:'不接受'},
+    islands:{accept:'接受',tune:'想调整',reject:'不接受'},
+    jobs:{two:'2 个（剑士/术士）',one:'只做 1 个',twoAlt:'2 个但换划分'},
+    timer:{yes:'能接受',soft:'可以但要软一点',no:'不接受'}
+  };
+  return (map[key]&&map[key][val])||val;
+}
+
+/* =========================================================
+   对比汇总
+   ========================================================= */
+function cmpHtml(){
+  if (!other) return '';
+  let same = [], diff = [];
+  SCHEMES.forEach(function(s){
+    const a = my.rate[s.id], b = other.rate[s.id]||{f:0,n:0};
+    if (!a.f && !a.n) return;
+    const df = Math.abs((a.f||0)-b.f), dn = Math.abs((a.n||0)-b.n);
+    if (df>=2||dn>=2) diff.push(s.id+' · '+s.name+'（你 刷'+(a.f||0)+'/叙'+(a.n||0)+'，对方 刷'+b.f+'/叙'+b.n+'）');
+    else if (df<=1&&dn<=1) same.push(s.id+' · '+s.name);
+  });
+  [['synth','合成方案'],['islands','两岛分工'],['jobs','职业'],['timer','翻面倒计时']].forEach(function(p){
+    if (my[p[0]] && other[p[0]]) {
+      if (my[p[0]]===other[p[0]]) same.push(p[1]+'：都是「'+labelOf(p[0],my[p[0]])+'」');
+      else diff.push(p[1]+'：你选「'+labelOf(p[0],my[p[0]])+'」，对方选「'+labelOf(p[0],other[p[0]])+'」');
+    }
+  });
+  let h = '<h4>对方：'+(ROLE_NAME[other.role]||'未选身份')+'</h4>';
+  h += '<div class="li"><b style="color:var(--ok)">一致 '+same.length+' 项</b>'+(same.length?'<br>'+same.map(esc).join('<br>'):'')+'</div>';
+  h += '<div class="li" style="margin-top:10px"><b style="color:var(--warn)">分歧 '+diff.length+' 项</b>'+(diff.length?'<br>'+diff.map(esc).join('<br>'):'')+'</div>';
+  const m = other.mix||{battle:50,explore:25,story:25};
+  h += '<div class="li" style="margin-top:10px">配比 —— 你 <b>'+my.mix.battle+'/'+my.mix.explore+'/'+my.mix.story+'</b>，对方 <b>'+m.battle+'/'+m.explore+'/'+m.story+'</b></div>';
+  if (diff.length) h += '<div class="li" style="margin-top:10px;color:var(--mut2)">建议：<b>优先讨论分歧最大的那一项</b>，其它先放下。</div>';
+  else if (same.length) h += '<div class="li" style="margin-top:10px;color:var(--ok)">看法基本一致，可以直接进入下一步。</div>';
+  return h;
+}
+
+/* =========================================================
+   结果文本
+   ========================================================= */
+function build(){
+  const d = new Date();
+  const p = n => String(n).padStart(2,'0');
+  const me = ROLE_NAME[my.role]||'未选身份';
+  let out = '【底层核心玩法 · 投票结果】\n';
+  out += '时间：'+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+'\n';
+  out += '身份：'+me+'\n';
+  out += '————————————————\n\n';
+
+  out += '■ 方案评分（可玩性 / 叙事密度，0–5）\n';
+  SCHEMES.forEach(function(s){
+    const r = my.rate[s.id];
+    out += '  '+s.id+' '+s.name+'  →  '+(r.f||'－')+' / '+(r.n||'－')+(my.rank[s.id]?'   排序 '+my.rank[s.id]:'')+'\n';
+  });
+
+  out += '\n■ 合成方案（骨架B + 心脏C + 长线D + 高潮A）\n  '+(my.synth?('→ '+labelOf('synth',my.synth)):'（未选）')+'\n';
+  out += '\n■ Demo 配比\n  战斗 '+my.mix.battle+'% / 探索记录 '+my.mix.explore+'% / 叙事抉择 '+my.mix.story+'%\n';
+  out += '\n■ 两座岛分工\n  '+(my.islands?('→ '+labelOf('islands',my.islands)):'（未选）')+'\n';
+  out += '\n■ 职业\n  '+(my.jobs?('→ '+labelOf('jobs',my.jobs)):'（未选）')+'\n';
+  out += '\n■ 翻面倒计时\n  '+(my.timer?('→ '+labelOf('timer',my.timer)):'（未选）')+'\n';
+
+  if (other){
+    out += '\n————————————————\n■ 与对方（'+(ROLE_NAME[other.role]||'未选身份')+'）的对比\n';
+    out += cmpText();
+  }
+  out += '\n————————————————\n（把这段文字整段发给对方就好）\n';
+  return out;
+}
+
+function cmpText(){
+  let same=[], diff=[];
+  SCHEMES.forEach(function(s){
+    const a=my.rate[s.id], b=other.rate[s.id]||{f:0,n:0};
+    if(!a.f&&!a.n) return;
+    const df=Math.abs((a.f||0)-b.f), dn=Math.abs((a.n||0)-b.n);
+    if(df>=2||dn>=2) diff.push('  '+s.id+' 你 '+(a.f||0)+'/'+(a.n||0)+'，对方 '+b.f+'/'+b.n);
+    else if(df<=1&&dn<=1) same.push('  '+s.id+' 看法接近');
+  });
+  [['synth','合成方案'],['islands','两岛分工'],['jobs','职业'],['timer','倒计时']].forEach(function(p){
+    if(my[p[0]]&&other[p[0]]){
+      if(my[p[0]]===other[p[0]]) same.push('  '+p[1]+'：一致');
+      else diff.push('  '+p[1]+'：你「'+labelOf(p[0],my[p[0]])+'」/ 对方「'+labelOf(p[0],other[p[0]])+'」');
+    }
+  });
+  let t = '一致 '+same.length+' 项'+(same.length?'\n'+same.join('\n'):'')+'\n';
+  t += '分歧 '+diff.length+' 项'+(diff.length?'\n'+diff.join('\n'):'')+'\n';
+  return t;
+}
+
+/* =========================================================
+   存档 / 回传链接
+   ========================================================= */
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(my)); }catch(e){} }
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if (raw){ const d = JSON.parse(raw); Object.keys(d).forEach(function(k){ my[k]=d[k]; }); }
+  }catch(e){}
+}
+function encode(){ return btoa(JSON.stringify(my)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function decode(s){
+  try{
+    let b=String(s).replace(/-/g,'+').replace(/_/g,'/');
+    while(b.length%4) b+='=';
+    return JSON.parse(atob(b));
+  }catch(e){ return null; }
+}
+
+/* =========================================================
+   进度
+   ========================================================= */
+function updateProg(){
+  let total=0, done=0;
+  SCHEMES.forEach(function(s){ total+=3; if(my.rate[s.id].f) done++; if(my.rate[s.id].n) done++; if(my.rank[s.id]) done++; });
+  total += 4;
+  ['synth','islands','jobs','timer'].forEach(function(k){ if(my[k]) done++; });
+  const g=q('prog'); if(g) g.textContent = '已填 '+done+' / '+total;
+  const h=q('hint');
+  if (h) h.textContent = done===0 ? '各自评一遍，然后把结果发给对方'
+    : (other ? '对方答案已载入 —— 看一下下面的「对方的选择」' : '填完点左边，生成回传链接发给对方');
+}
+
+/* =========================================================
+   事件
+   ========================================================= */
+q('gen').addEventListener('click', function(){
+  const url = location.origin + location.pathname + '#a=' + encode();
+  let txt = build();
+  txt = txt.replace('（把这段文字整段发给对方就好）',
+    '【回传链接】\n'+url+'\n（对方打开这条链接，就会自动看到你的评分并标出一致与分歧）\n');
+  q('out').value = txt;
+  q('result').style.display = 'block';
+  q('result').scrollIntoView({behavior:'smooth', block:'start'});
+  try{
+    const ta=q('out'); ta.focus({preventScroll:true}); ta.select(); ta.setSelectionRange(0,999999);
+  }catch(e){}
+});
+q('selall').addEventListener('click', function(){
+  const ta=q('out'); if(!ta.value) return;
+  try{ ta.focus(); ta.select(); ta.setSelectionRange(0,999999); }catch(e){}
+});
+q('reset').addEventListener('click', function(){
+  if(!confirm('清空所有选择，重新开始？')) return;
+  Object.keys(my).forEach(function(k){
+    if (k==='rate') { SCHEMES.forEach(function(s){ my.rate[s.id]={f:0,n:0}; }); }
+    else if (k==='rank') { SCHEMES.forEach(function(s){ my.rank[s.id]=0; }); }
+    else if (k==='mix') { my.mix=Object.assign({},MIX_DEFAULT); }
+    else if (k==='role') { my.role=null; }
+    else my[k]=null;
+  });
+  try{ localStorage.removeItem(KEY); }catch(e){}
+  render();
+});
+
+/* 结果区 */
+(function(){
+  const r = el('div'); r.id='result';
+  r.innerHTML = '<h3>结果</h3>'+
+    '<p style="color:var(--mut);font-size:13.5px;margin:0 0 10px">'+
+      '点「复制」整段发对方；或者复制下面的<b>回传链接</b>——对方打开就能看到你的评分，并自动标出一致与分歧。'+
+      '手机如果复制没反应，点「全选」再长按拷贝。</p>'+
+    '<textarea id="out" readonly></textarea>'+
+    '<div class="r-btns">'+
+      '<button class="b-main" id="copy">📋 复制</button>'+
+      '<button class="b-ghost" id="copyurl">🔗 只复制链接</button>'+
+      '<button class="b-ghost" id="dl">⬇ 下载 txt</button>'+
+      '<span class="copied" id="copied"></span>'+
+    '</div>';
+  app.parentNode.insertBefore(r, document.querySelector('footer'));
+  if (navigator.share){
+    const b=el('button','b-ghost','📤 分享');
+    b.id='ws'; q('copy').insertAdjacentElement('afterend', b);
+  }
+})();
+
+document.addEventListener('click', function(e){
+  const id = e.target && e.target.id;
+  if (id==='copy' || id==='copyurl'){
+    const ta=q('out'); if(!ta.value){ q('gen').click(); }
+    const val = id==='copyurl' ? (ta.value.match(/https?:\/\/\S+/)||[''])[0] : ta.value;
+    if(!val) return;
+    let ok=false;
+    try{
+      const tmp=document.createElement('textarea'); tmp.value=val;
+      tmp.style.position='fixed'; tmp.style.opacity='0'; document.body.appendChild(tmp);
+      tmp.select(); tmp.setSelectionRange(0,999999); ok=document.execCommand('copy'); tmp.remove();
+    }catch(err){ ok=false; }
+    if(!ok && navigator.clipboard){ navigator.clipboard.writeText(val).then(function(){ q('copied').textContent='✅ 已复制'; }).catch(function(){ q('copied').textContent='请长按「全选」后手动拷贝'; }); }
+    else q('copied').textContent = ok ? '✅ 已复制' : '请长按「全选」后手动拷贝';
+    setTimeout(function(){ q('copied').textContent=''; }, 2800);
+  }
+  if (id==='ws'){
+    const ta=q('out'); if(!ta.value) q('gen').click();
+    if (navigator.share) navigator.share({title:'底层核心玩法 · 投票结果', text:q('out').value}).catch(function(){});
+  }
+  if (id==='dl'){
+    const blob=new Blob(['\ufeff'+q('out').value],{type:'text/plain;charset=utf-8'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='玩法投票.txt';
+    document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500);
+  }
+});
+
+/* =========================================================
+   启动
+   ========================================================= */
+load();
+(function(){
+  const m = location.hash.match(/[#&]a=([A-Za-z0-9\-_]+)/);
+  if (m){ const d = decode(m[1]); if (d && d.rate) other = d; }
+})();
+render();
+updateProg();
+if (other){
+  const w = el('div');
+  w.style.cssText='background:rgba(79,209,197,.12);border:1px solid rgba(79,209,197,.4);border-radius:12px;padding:11px 13px;margin:0 0 16px;font-size:13.5px';
+  w.innerHTML='✅ 已载入对方的答案 —— 往下看「<b>对方的选择</b>」一节，那里标出了一致与分歧点。';
+  app.insertBefore(w, app.firstChild);
+}
+</script>
+</body>
+</html>
