@@ -99,11 +99,20 @@
 
   /* 滑块 */
   .mix{margin:14px 0 0}
-  .mix-row{display:grid;grid-template-columns:72px 1fr 46px;gap:10px;align-items:center;margin:8px 0}
+  .mix-row{display:grid;grid-template-columns:76px 1fr 88px;gap:10px;align-items:center;margin:8px 0}
+  .mix-numwrap{display:flex;align-items:center;gap:4px;justify-content:flex-end}
+  .mix-num{width:62px;padding:6px 8px;border-radius:8px;border:1.5px solid #1e4159;
+    background:#0e2337;color:var(--txt);font-size:14px;font-family:inherit;text-align:right}
+  .mix-num:focus{outline:none;border-color:var(--acc)}
+  .mix-unit{color:var(--mut2);font-size:12.5px}
   .mix-row label{font-size:13.5px;color:var(--mut)}
   input[type=range]{width:100%;accent-color:var(--acc)}
   .mix-val{font-size:14px;font-weight:700;text-align:right;color:var(--acc)}
   .mix-note{font-size:12.5px;color:var(--mut2);margin-top:6px}
+  .mix-norm{margin-top:12px;padding:10px 12px;border-radius:10px;font-size:14px;
+    background:rgba(79,209,197,.10);border:1px solid rgba(79,209,197,.30)}
+  .mix-norm .dim{color:var(--mut2);font-size:12.5px}
+  .mix-norm .warn{color:var(--warn)}
 
   /* 身份 */
   .roles{display:flex;gap:10px;flex-wrap:wrap}
@@ -280,6 +289,56 @@ function el(tag, cls, html){ const e=document.createElement(tag); if(cls) e.clas
 function q(id){ return document.getElementById(id); }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+/* 把三项权重归一化成总和 100 的百分比（最大余数法，保证加起来正好 100） */
+const MIX_KEYS = ['battle','explore','story'];
+const MIX_NAME = { battle:'战斗', explore:'探索记录', story:'叙事抉择' };
+function normMix(m){
+  m = m || {};
+  const total = MIX_KEYS.reduce(function(a,k){ return a + (m[k]||0); }, 0);
+  const out = { battle:0, explore:0, story:0 };
+  if (!total) return out;
+  const scaled = MIX_KEYS.map(function(k){ return (m[k]||0) / total * 100; });
+  const fl = scaled.map(Math.floor);
+  let rem = 100 - fl.reduce(function(a,b){ return a+b; }, 0);
+  const order = scaled.map(function(v,i){ return { i:i, frac: v - Math.floor(v) }; })
+                      .sort(function(a,b){ return b.frac - a.frac; });
+  for (let j = 0; j < rem; j++) fl[order[j % MIX_KEYS.length].i]++;
+  MIX_KEYS.forEach(function(k,i){ out[k] = fl[i]; });
+  return out;
+}
+function mixSum(m){ return MIX_KEYS.reduce(function(a,k){ return a + ((m||{})[k]||0); }, 0); }
+function clamp100(v){
+  let n = parseInt(String(v).replace(/[^0-9]/g,''), 10);
+  if (isNaN(n)) n = 0;
+  return n < 0 ? 0 : (n > 100 ? 100 : n);
+}
+function syncNum(k){ const n = q('mn-'+k); if (n) n.value = my.mix[k]; }
+function syncSlider(k){
+  const r = document.querySelector('input[type=range][data-mix="'+k+'"]');
+  if (r) r.value = my.mix[k];
+}
+/* 只在用户点按钮时把三项按比例配平成整数百分比（不会自动触发） */
+function scaleMixTo100(){
+  if (!mixSum(my.mix)) return;
+  const n = normMix(my.mix);
+  MIX_KEYS.forEach(function(k){ my.mix[k] = n[k]; syncSlider(k); syncNum(k); });
+  paintNorm(); save();
+}
+function paintNorm(){
+  const box = q('mix-norm'); if (!box) return;
+  const sum = mixSum(my.mix);
+  if (!sum){
+    box.innerHTML = '<span class="warn">三项都是 0 —— 请至少给一项分配权重。</span>';
+    return;
+  }
+  const n = normMix(my.mix);
+  box.innerHTML = '实际配比：' +
+    '<b>战斗 '+n.battle+'%</b> / <b>探索记录 '+n.explore+'%</b> / <b>叙事抉择 '+n.story+'%</b>' +
+    (sum === 100
+      ? '　<span class="dim">权重合计 100 ✓</span>'
+      : '　<span class="dim">权重合计 '+sum+'，已按比例归一化到 100%（想换成整数百分比，点「按比例配平到 100」）</span>');
+}
+
 /* =========================================================
    渲染
    ========================================================= */
@@ -412,37 +471,67 @@ function render(){
     ['reject','不接受','我想先只做一个方案']
   ]));
 
-  // 配比滑块
+  // 配比：滑杆 + 右侧可输入的数字框，三条互相独立，下方实时显示归一化结果
   const mixWrap = el('div','mix');
-  mixWrap.innerHTML = '<h4 style="margin:18px 0 2px;font-size:15px">Demo 配比（战斗 / 探索记录 / 叙事抉择）</h4>'+
-    '<p class="sec-d" style="margin-left:0">建议值 50 / 25 / 25。拖动即可，会自动保持总和 100。</p>';
-  [['battle','战斗'],['explore','探索记录'],['story','叙事抉择']].forEach(function(m){
+  mixWrap.innerHTML = '<h4 style="margin:18px 0 2px;font-size:15px">Demo 配比 · 相对权重（战斗 / 探索记录 / 叙事抉择）</h4>'+
+    '<p class="sec-d" style="margin-left:0">拖滑杆，或者<b>直接点右边的数字框填数字</b>，两者会互相同步。三条互相独立——改哪条就只改哪条，不会带动其它两条。下面的「实际配比」是按权重归一化后的结果，所以你不必让三条刚好加起来等于 100。</p>';
+  MIX_KEYS.forEach(function(k){
     const row = el('div','mix-row');
-    row.innerHTML = '<label>'+m[1]+'</label>'+
-      '<input type="range" min="0" max="100" step="5" value="'+my.mix[m[0]]+'" data-mix="'+m[0]+'">'+
-      '<div class="mix-val" id="mv-'+m[0]+'">'+my.mix[m[0]]+'%</div>';
+    row.innerHTML = '<label>'+MIX_NAME[k]+'</label>'+
+      '<input type="range" min="0" max="100" step="1" value="'+my.mix[k]+'" data-mix="'+k+'">'+
+      '<div class="mix-numwrap"><input type="number" class="mix-num" id="mn-'+k+'" data-num="'+k+'" '+
+        'min="0" max="100" step="1" inputmode="numeric" value="'+my.mix[k]+'"><span class="mix-unit">%</span></div>';
     mixWrap.appendChild(row);
   });
+  const normBox = el('div','mix-norm'); normBox.id = 'mix-norm';
+  mixWrap.appendChild(normBox);
+
+  const btnRow = el('div');
+  btnRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:10px';
+  const mixScale = el('button','b-ghost','⇄ 按比例配平到 100');
+  mixScale.addEventListener('click', function(){ scaleMixTo100(); });
+  btnRow.appendChild(mixScale);
+  const mixReset = el('button','b-ghost','↺ 重置为 50 / 25 / 25');
+  mixReset.addEventListener('click', function(){
+    my.mix = Object.assign({}, MIX_DEFAULT); save(); render();
+  });
+  btnRow.appendChild(mixReset);
+  mixWrap.appendChild(btnRow);
   mixWrap.appendChild(el('div','mix-note','注：关键不在配比，而在"叙事不是看演出，而是通过选择产生"——过场动画最贵，"因为你怎么打，所以故事变成这样"最便宜。'));
   s3.appendChild(mixWrap);
   app.appendChild(s3);
+
+  // 滑杆 → 数字框
   mixWrap.querySelectorAll('input[type=range]').forEach(function(inp){
     inp.addEventListener('input', function(){
-      my.mix[inp.dataset.mix] = parseInt(inp.value,10);
-      // 把差额按比例分摊到另外两项
-      const keys = ['battle','explore','story'].filter(function(k){ return k!==inp.dataset.mix; });
-      let rest = 100 - my.mix[inp.dataset.mix];
-      const sum = keys.reduce(function(a,k){ return a+my.mix[k]; },0) || 1;
-      keys.forEach(function(k,i){
-        my.mix[k] = (i===keys.length-1) ? rest : Math.round(rest * (my.mix[k]/sum));
-        rest -= my.mix[k];
-      });
-      save();
-      keys.forEach(function(k){ var g=q('mv-'+k); if(g) g.textContent = my.mix[k]+'%'; });
-      q('mv-'+inp.dataset.mix).textContent = my.mix[inp.dataset.mix]+'%';
-      updateProg();
+      const k = inp.dataset.mix;
+      my.mix[k] = clamp100(inp.value);
+      inp.value = my.mix[k];
+      syncNum(k);
+      paintNorm(); save(); updateProg();
     });
   });
+  // 数字框 → 滑杆
+  mixWrap.querySelectorAll('input[type=number]').forEach(function(num){
+    num.addEventListener('input', function(){
+      const k = num.dataset.num;
+      if (String(num.value).trim() === '') return;   // 正在删空，先别动
+      my.mix[k] = clamp100(num.value);
+      syncSlider(k);
+      paintNorm(); save(); updateProg();
+    });
+    ['change','blur'].forEach(function(ev){
+      num.addEventListener(ev, function(){
+        const k = num.dataset.num;
+        if (String(num.value).trim() === '') { num.value = my.mix[k]; return; }  // 清空则还原原值
+        my.mix[k] = clamp100(num.value);
+        num.value = my.mix[k];                       // 纠正超范围
+        syncSlider(k);
+        paintNorm(); save();
+      });
+    });
+  });
+  paintNorm();
 
   /* ---- 两座岛 ---- */
   const s4 = section('④','两座岛怎么分工','把两种倾向各自主导一次，比"每座岛都五五开"更好——各自都有一个能证明自己的舞台。');
@@ -554,7 +643,8 @@ function cmpHtml(){
   h += '<div class="li"><b style="color:var(--ok)">一致 '+same.length+' 项</b>'+(same.length?'<br>'+same.map(esc).join('<br>'):'')+'</div>';
   h += '<div class="li" style="margin-top:10px"><b style="color:var(--warn)">分歧 '+diff.length+' 项</b>'+(diff.length?'<br>'+diff.map(esc).join('<br>'):'')+'</div>';
   const m = other.mix||{battle:50,explore:25,story:25};
-  h += '<div class="li" style="margin-top:10px">配比 —— 你 <b>'+my.mix.battle+'/'+my.mix.explore+'/'+my.mix.story+'</b>，对方 <b>'+m.battle+'/'+m.explore+'/'+m.story+'</b></div>';
+  const nm = normMix(my.mix), no = normMix(m);
+  h += '<div class="li" style="margin-top:10px">配比 —— 你 <b>'+nm.battle+'/'+nm.explore+'/'+nm.story+'</b>，对方 <b>'+no.battle+'/'+no.explore+'/'+no.story+'</b></div>';
   if (diff.length) h += '<div class="li" style="margin-top:10px;color:var(--mut2)">建议：<b>优先讨论分歧最大的那一项</b>，其它先放下。</div>';
   else if (same.length) h += '<div class="li" style="margin-top:10px;color:var(--ok)">看法基本一致，可以直接进入下一步。</div>';
   return h;
@@ -579,7 +669,9 @@ function build(){
   });
 
   out += '\n■ 合成方案（骨架B + 心脏C + 长线D + 高潮A）\n  '+(my.synth?('→ '+labelOf('synth',my.synth)):'（未选）')+'\n';
-  out += '\n■ Demo 配比\n  战斗 '+my.mix.battle+'% / 探索记录 '+my.mix.explore+'% / 叙事抉择 '+my.mix.story+'%\n';
+  const nm = normMix(my.mix), msum = mixSum(my.mix);
+  out += '\n■ Demo 配比\n  战斗 '+nm.battle+'% / 探索记录 '+nm.explore+'% / 叙事抉择 '+nm.story+'%' +
+         (msum === 100 ? '' : '（权重 '+my.mix.battle+'/'+my.mix.explore+'/'+my.mix.story+' 归一化）') + '\n';
   out += '\n■ 两座岛分工\n  '+(my.islands?('→ '+labelOf('islands',my.islands)):'（未选）')+'\n';
   out += '\n■ 职业\n  '+(my.jobs?('→ '+labelOf('jobs',my.jobs)):'（未选）')+'\n';
   out += '\n■ 翻面倒计时\n  '+(my.timer?('→ '+labelOf('timer',my.timer)):'（未选）')+'\n';
