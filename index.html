@@ -97,6 +97,19 @@
   .opt .l{font-size:14.5px;font-weight:600}
   .opt .d{font-size:12.5px;color:var(--mut);margin-top:2px}
 
+  /* ---------- 选填的想法框 ---------- */
+  .note-wrap{margin-top:10px}
+  .note{width:100%;min-height:58px;background:#0e2337;border:1.5px solid #1e4159;border-radius:10px;
+    color:var(--txt);padding:9px 11px;font-size:13.5px;font-family:inherit;line-height:1.6;resize:vertical}
+  .note:focus{outline:none;border-color:var(--acc)}
+  .note-add{background:transparent;border:1.5px dashed #2b5470;color:var(--mut2);font-size:12.5px;
+    padding:6px 12px;border-radius:9px;margin-top:9px;cursor:pointer;font-family:inherit;transition:all .14s}
+  .note-add:hover{border-color:var(--acc);color:var(--acc)}
+  .note-cmp{margin-top:8px;padding:9px 11px;border-radius:9px;background:rgba(79,209,197,.08);
+    border:1px solid rgba(79,209,197,.25);font-size:12.5px;color:var(--mut);line-height:1.65}
+  .note-cmp b{color:var(--txt)}
+  .note-cmp .who{color:var(--mut2)}
+
   /* 滑块 */
   .mix{margin:14px 0 0}
   .mix-row{display:grid;grid-template-columns:76px 1fr 88px;gap:10px;align-items:center;margin:8px 0}
@@ -341,10 +354,20 @@ const GROUPS = [
 
 const GROUP_KEYS = GROUPS.map(function(g){ return g.key; });
 
+/* 每个决定都可以附一条选填的想法（合成方案也算一个） */
+const NOTE_ITEMS = GROUPS.map(function(g){ return { key:g.key, title:groupTitle(g) }; })
+                        .concat([{ key:'synth', title:'合成方案' }]);
+function noteOf(src, key){ return ((src && src.notes && src.notes[key]) || '').trim(); }
+function noteLine(src, key){
+  const n = noteOf(src, key);
+  return n ? '      〔想法〕' + n.replace(/\s*\n\s*/g, ' ／ ') + '\n' : '';
+}
+
 const my = {
   role: null,
   rate: { A:{f:0,n:0}, B:{f:0,n:0}, C:{f:0,n:0}, D:{f:0,n:0} },
   rank: { A:0, B:0, C:0, D:0 },
+  notes: {},
   synth: null, mix: Object.assign({}, MIX_DEFAULT)
 };
 GROUP_KEYS.forEach(function(k){ my[k] = null; });
@@ -665,10 +688,43 @@ function optionGroup(key, title, opts){
     box.appendChild(d);
   });
   w.appendChild(box);
+
+  /* 选填的想法框：选过任意选项后自动出现；还没选也可以点「补充想法」提前写 */
+  const noteVal = noteOf(my, key);
+  const hasEntry = !!(my.notes && Object.prototype.hasOwnProperty.call(my.notes, key));
+  if (my[key] || hasEntry || noteVal){
+    const nw = el('div','note-wrap');
+    const ta = document.createElement('textarea');
+    ta.className = 'note';
+    ta.setAttribute('data-note', key);
+    ta.placeholder = '选填：为什么这么选、有什么顾虑、想附加什么条件…';
+    ta.value = noteVal;
+    ta.addEventListener('input', function(){
+      if (!my.notes) my.notes = {};
+      my.notes[key] = ta.value;
+      save();                       // 注意：不调 render()，否则输入时会丢焦点
+    });
+    nw.appendChild(ta);
+    w.appendChild(nw);
+  } else {
+    const add = el('button','note-add','＋ 补充想法（选填）');
+    add.setAttribute('data-note', key);
+    add.addEventListener('click', function(){
+      if (!my.notes) my.notes = {};
+      my.notes[key] = '';
+      save(); render();
+    });
+    w.appendChild(add);
+  }
+
   if (other && other[key] && my[key]){
     const same = other[key]===my[key];
     w.appendChild(el('div', null, '<div style="margin-top:8px"><span class="badge '+(same?'ok':'no')+'">'+
       (same?'与对方一致':'与对方不同：对方选了「'+(labelOf(key,other[key]))+'」')+'</span></div>'));
+  }
+  if (other){
+    const on = noteOf(other, key);
+    if (on) w.appendChild(el('div','note-cmp','<b>对方的想法</b><br>'+esc(on)));
   }
   return w;
 }
@@ -718,6 +774,22 @@ function cmpHtml(){
   h += '<div class="li" style="margin-top:10px">配比 —— 你 <b>'+nm.battle+'/'+nm.explore+'/'+nm.story+'</b>，对方 <b>'+no.battle+'/'+no.explore+'/'+no.story+'</b></div>';
   if (diff.length) h += '<div class="li" style="margin-top:10px;color:var(--mut2)">建议：<b>优先讨论分歧最大的那一项</b>，其它先放下。</div>';
   else if (same.length) h += '<div class="li" style="margin-top:10px;color:var(--ok)">看法基本一致，可以直接进入下一步。</div>';
+
+  /* 想法对照：只列有人写了内容的那些 */
+  const noteRows = [];
+  NOTE_ITEMS.forEach(function(it){
+    const mn = noteOf(my, it.key), on = noteOf(other, it.key);
+    if (mn || on) {
+      noteRows.push('<div class="li" style="margin-top:9px"><b>'+esc(it.title)+'</b><br>'+
+        '<span class="who">你：</span>'+esc(mn||'—')+'<br>'+
+        '<span class="who">对方：</span>'+esc(on||'—')+'</div>');
+    }
+  });
+  if (noteRows.length) {
+    h += '<div class="li" style="margin-top:16px"><b style="color:var(--acc)">想法对照（'+noteRows.length+' 条）</b>' +
+         '<div style="color:var(--mut2);font-size:12.5px">这些是双方自己写的补充说明——分歧往往就在这里。</div></div>' +
+         noteRows.join('');
+  }
   return h;
 }
 
@@ -740,6 +812,7 @@ function build(){
   });
 
   out += '\n■ 合成方案（骨架B + 心脏C + 长线D + 高潮A）\n  '+(my.synth?('→ '+labelOf('synth',my.synth)):'（未选）')+'\n';
+  out += noteLine(my, 'synth');
   const nm = normMix(my.mix), msum = mixSum(my.mix);
   out += '\n■ Demo 配比\n  战斗 '+nm.battle+'% / 探索记录 '+nm.explore+'% / 叙事抉择 '+nm.story+'%' +
          (msum === 100 ? '' : '（权重 '+my.mix.battle+'/'+my.mix.explore+'/'+my.mix.story+' 归一化）') + '\n';
@@ -748,6 +821,7 @@ function build(){
     out += '\n■ ' + secName[num] + '\n';
     GROUPS.filter(function(g){ return g.sec === num; }).forEach(function(g){
       out += '  ' + groupTitle(g) + '：' + (my[g.key] ? '→ ' + labelOf(g.key, my[g.key]) : '（未选）') + '\n';
+      out += noteLine(my, g.key);
     });
   });
 
@@ -781,6 +855,12 @@ function cmpText(){
   }
   let t = '一致 '+same.length+' 项'+(same.length?'\n'+same.join('\n'):'')+'\n';
   t += '分歧 '+diff.length+' 项'+(diff.length?'\n'+diff.join('\n'):'')+'\n';
+  const nt = [];
+  NOTE_ITEMS.forEach(function(it){
+    const mn = noteOf(my, it.key), on = noteOf(other, it.key);
+    if (mn || on) nt.push('  '+it.title+'\n    你：'+(mn||'—')+'\n    对方：'+(on||'—'));
+  });
+  if (nt.length) t += '想法对照\n' + nt.join('\n') + '\n';
   return t;
 }
 
@@ -794,12 +874,34 @@ function load(){
     if (raw){ const d = JSON.parse(raw); Object.keys(d).forEach(function(k){ my[k]=d[k]; }); }
   }catch(e){}
 }
-function encode(){ return btoa(JSON.stringify(my)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+/* btoa/atob 只认 Latin1 —— 想法框里一填中文就会抛 InvalidCharacterError，
+   所以必须先做 UTF-8 转换。优先用 TextEncoder，老浏览器回退到 escape/unescape。 */
+function b64encode(str){
+  if (typeof TextEncoder !== 'undefined'){
+    const bytes = new TextEncoder().encode(str);
+    let bin = '';
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+  return btoa(unescape(encodeURIComponent(str)));
+}
+function b64decode(b64){
+  const bin = atob(b64);
+  if (typeof TextDecoder !== 'undefined'){
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+  return decodeURIComponent(escape(bin));
+}
+function encode(){
+  return b64encode(JSON.stringify(my)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
 function decode(s){
   try{
-    let b=String(s).replace(/-/g,'+').replace(/_/g,'/');
-    while(b.length%4) b+='=';
-    return JSON.parse(atob(b));
+    let b = String(s).replace(/-/g,'+').replace(/_/g,'/');
+    while (b.length % 4) b += '=';
+    return JSON.parse(b64decode(b));
   }catch(e){ return null; }
 }
 
@@ -824,8 +926,12 @@ function updateProg(){
 q('gen').addEventListener('click', function(){
   const url = location.origin + location.pathname + '#a=' + encode();
   let txt = build();
+  const warning = url.length > 1800
+    ? '（链接偏长——因为想法写得比较多。建议直接用上面的「复制」，把整段文字发过去更稳）\n'
+    : '';
   txt = txt.replace('（把这段文字整段发给对方就好）',
-    '【回传链接】\n'+url+'\n（对方打开这条链接，就会自动看到你的评分并标出一致与分歧）\n');
+    '【回传链接】\n' + url + '\n' +
+    '（对方打开这条链接，就会自动看到你的评分、想法，并标出一致与分歧）\n' + warning);
   q('out').value = txt;
   q('result').style.display = 'block';
   q('result').scrollIntoView({behavior:'smooth', block:'start'});
@@ -843,6 +949,7 @@ q('reset').addEventListener('click', function(){
     if (k==='rate') { SCHEMES.forEach(function(s){ my.rate[s.id]={f:0,n:0}; }); }
     else if (k==='rank') { SCHEMES.forEach(function(s){ my.rank[s.id]=0; }); }
     else if (k==='mix') { my.mix=Object.assign({},MIX_DEFAULT); }
+    else if (k==='notes') { my.notes={}; }
     else if (k==='role') { my.role=null; }
     else my[k]=null;
   });
