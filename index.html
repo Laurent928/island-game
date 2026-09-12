@@ -268,13 +268,86 @@ const SCHEMES = [
 
 const MIX_DEFAULT = { battle:50, explore:25, story:25 };
 
+/* =========================================================
+   ④⑤⑥ 三节的具体决策（数据驱动）
+   —— 每个 group 都是一个小决定；选项里的第一个通常是推荐项。
+   —— 渲染、对比、导出、进度统计都从这张表自动推导，避免漏项。
+   ========================================================= */
+const GROUPS = [
+  /* ---------- ④ 两座岛 ---------- */
+  { sec:'④', key:'islands', title:'④-A · 这个分工你接受吗？', opts:[
+    ['accept','接受：岛1 叙事主导、岛2 战斗主导','两种倾向各自主导一次（推荐）'],
+    ['even','两座岛都用同一套结构（五五开）','统一，但两边都不够突出'],
+    ['swap','对调：岛1 战斗、岛2 叙事','先教学后爆发，也是一种做法'],
+    ['other','有别的想法','写在下面的留言里'] ] },
+
+  { sec:'④', key:'islFirst', title:'④-B · 岛1（老家）的结尾怎么收', opts:[
+    ['cannot','一次玩家无法阻止的小翻面','情感钩子 + 推动出海（推荐）'],
+    ['can','玩家可以成功阻止','教学成功感更强，但少了推力'],
+    ['none','老家不发生翻面，纯安全区','最温和，但少了机制预习'] ] },
+
+  { sec:'④', key:'islGoals', title:'④-C · 岛2 的「可刷目标」做几种', opts:[
+    ['g3','3 种：撤离 / 抢收 / 催化','展示完整，重复价值够（推荐）'],
+    ['g2','2 种：撤离 / 催化','最快做完，够展示道德对立'],
+    ['g4','4 种以上','重复价值更高，内容量翻倍'] ] },
+
+  { sec:'④', key:'islPerma', title:'④-D · 玩家在岛2 的选择，要不要永久改变它', opts:[
+    ['perma','永久改变，不可恢复','"世界记得你做过什么"（推荐）'],
+    ['partial','半永久：这次运行内不恢复','折中，重开可以清掉'],
+    ['reset','随时可以重置','方便反复刷，但抉择没有重量'] ] },
+
+  /* ---------- ⑤ 职业 ---------- */
+  { sec:'⑤', key:'jobs', title:'⑤-A · 做 1 个还是 2 个职业', opts:[
+    ['two','2 个：剑士 + 术士','正好把两种倾向各放一个（推荐）'],
+    ['one','只做 1 个：术士','直接暴露这个世界最独特的东西'],
+    ['twoAlt','2 个，但换个组合','我有别的职业想法'] ] },
+
+  { sec:'⑤', key:'jobShare', title:'⑤-B · 两个职业的技能树怎么分', opts:[
+    ['shared','共享基础 + 各自专属','差异感与工作量平衡（推荐）'],
+    ['indep','完全独立两套','差异最大，工作量也最大'],
+    ['skin','只换外观与少量技能','最省，但职业身份很弱'] ] },
+
+  { sec:'⑤', key:'jobSwitch', title:'⑤-C · 能不能中途换职业', opts:[
+    ['no','不能换','代价感强，选择更重（推荐）'],
+    ['port','只在母港 / 港口换','折中'],
+    ['any','随时可换','最方便，但削弱职业身份'] ] },
+
+  { sec:'⑤', key:'jobFirst', title:'⑤-D · 序章的第一位主角用谁', opts:[
+    ['mage','术士','一开始就能碰"平衡度"，最贴主题（推荐）'],
+    ['sword','剑士','最直观，上手最快'],
+    ['both','两个都做，玩家开局选','工作量最大'] ] },
+
+  /* ---------- ⑥ 翻面倒计时 ---------- */
+  { sec:'⑥', key:'timer', title:'⑥-A · 能不能接受「翻面倒计时」', opts:[
+    ['soft','可以，但要软一点','给足预告与准备时间（推荐）'],
+    ['yes','完全能接受','有时限才有紧张感，是"刷"的张力来源'],
+    ['no','不接受','不想在 demo 里加时限压力'] ] },
+
+  { sec:'⑥', key:'timerLen', title:'⑥-B · 倒计时给多长（游戏内时间）', opts:[
+    ['d1','1 天','紧张但可规划（推荐）'],
+    ['d3','3–5 天','从容，偏探索'],
+    ['hours','几小时','很紧，压迫感强'] ] },
+
+  { sec:'⑥', key:'timerFail', title:'⑥-C · 倒计时归零会怎样', opts:[
+    ['flip','岛屿翻面，损失部分进度','有分量，且顺势展示翻面（推荐）'],
+    ['retry','只是任务失败，可以重来','最宽容'],
+    ['perma','不可逆的世界变化','最重，可能让玩家挫败'] ] },
+
+  { sec:'⑥', key:'timerUI', title:'⑥-D · 倒计时要让玩家看见吗', opts:[
+    ['both','数字倒计时 + 天象氛围','看得懂又有代入感（推荐）'],
+    ['num','只给明确数字倒计时','最清楚'],
+    ['amb','只用天象 / 氛围暗示','最沉浸，但可能看不懂'] ] }
+];
+
+const GROUP_KEYS = GROUPS.map(function(g){ return g.key; });
+
 const my = {
   role: null,
   rate: { A:{f:0,n:0}, B:{f:0,n:0}, C:{f:0,n:0}, D:{f:0,n:0} },
   rank: { A:0, B:0, C:0, D:0 },
-  synth: null, mix: Object.assign({}, MIX_DEFAULT),
-  islands: null, jobs: null, timer: null
+  synth: null, mix: Object.assign({}, MIX_DEFAULT)
 };
+GROUP_KEYS.forEach(function(k){ my[k] = null; });
 
 let other = null;   // 对方通过回传链接载入的答案
 
@@ -349,6 +422,7 @@ function section(n, title, desc){
   h.appendChild(el('h2', null, title));
   s.appendChild(h);
   if (desc) s.appendChild(el('p','sec-d', desc));
+  app.appendChild(s);   // ★ 自动挂载：从结构上杜绝"创建了却忘记 append"这类错误
   return s;
 }
 
@@ -365,7 +439,6 @@ function render(){
     roles.appendChild(d);
   });
   s0.appendChild(roles);
-  app.appendChild(s0);
 
   /* ---- 四方案 ---- */
   const s1 = section('①','四个方案','点标题展开细节。核心区别只有一个：循环的"心脏"是什么。');
@@ -397,7 +470,6 @@ function render(){
     card.appendChild(body);
     s1.appendChild(card);
   });
-  app.appendChild(s1);
 
   /* ---- 评分与排序 ---- */
   const s2 = section('②','评分与排序','给每个方案打两个分：它能带来多少"想再玩一次"，能带来多少"故事密度"。0 = 完全不行，5 = 非常强。');
@@ -445,7 +517,6 @@ function render(){
   rtable.innerHTML = rhtml;
   rk.appendChild(rtable);
   s2.appendChild(rk);
-  app.appendChild(s2);
   // 填充排序按钮
   SCHEMES.forEach(function(s){
     const box = rtable.querySelector('[data-rank="'+s.id+'"]');
@@ -499,7 +570,6 @@ function render(){
   mixWrap.appendChild(btnRow);
   mixWrap.appendChild(el('div','mix-note','注：关键不在配比，而在"叙事不是看演出，而是通过选择产生"——过场动画最贵，"因为你怎么打，所以故事变成这样"最便宜。'));
   s3.appendChild(mixWrap);
-  app.appendChild(s3);
 
   // 滑杆 → 数字框
   mixWrap.querySelectorAll('input[type=range]').forEach(function(inp){
@@ -533,44 +603,36 @@ function render(){
   });
   paintNorm();
 
-  /* ---- 两座岛 ---- */
-  const s4 = section('④','两座岛怎么分工','把两种倾向各自主导一次，比"每座岛都五五开"更好——各自都有一个能证明自己的舞台。');
-  s4.appendChild(el('div','box',
-    '<b>岛 1 · 老家</b>（教学 + 情感锚点）：走动、战斗基础、第一次"安全的翻面"、1 个 NPC 关系。<br>'+
-    '配比 <b>叙事 40% / 战斗 35% / 探索 25%</b>。结尾：一次<b>玩家无法阻止</b>的小翻面 → 情感钩子，推动出海。<br><br>'+
-    '<b>岛 2 · 展示岛</b>（完整机制 + 可刷内容）：完整平衡度系统、可重复的远征（2–3 种目标）、可刷资源与敌人、<b>一次大翻面事件（3 种解法）</b>、1 个 boss、1 条支线、港口。<br>'+
-    '配比 <b>战斗 50% / 探索 25% / 叙事 25%</b>。结尾：玩家的选择<b>改变岛的状态且不会恢复</b> → "世界记得你做过什么"。'));
-  s4.appendChild(optionGroup('islands','这个分工你接受吗？',[
-    ['accept','接受','岛1 叙事主导、岛2 战斗主导'],
-    ['tune','想调整','配比或内容需要改'],
-    ['reject','不接受','两座岛应该是一样的结构']
-  ]));
-
-  /* ---- 职业 ---- */
-  const s5 = section('⑤','做 1 个还是 2 个职业','建议的两个职业不是"战士 vs 法师"的数值差异，而是<b>两种与世界的关系</b>。');
-  s5.appendChild(el('div','box',
-    '<b>职业 1 · 剑士</b>（强化自身漩涡）：低能量消耗、直接、成长清晰 → <b>改变自己</b>。服务于"刷起来有明确变强感"。<br><br>'+
-    '<b>职业 2 · 术士</b>（调用能量）：可施放影响<b>岛屿平衡度</b>的法术（抽取 / 稳定 / 催化）→ <b>改变世界</b>。玩家能直接操作世界状态，机制即叙事。<br><br>'+
-    '好处：两个职业的差异不是"哪个伤害高"，而是<b>"你要不要为力量负责"</b>——玩家选职业时，其实是在选立场。'));
-  s5.appendChild(optionGroup('jobs','职业方案',[
-    ['two','做 2 个，按剑士/术士划分','正好把两种倾向各放一个'],
-    ['one','只做 1 个 → 建议做术士','术士直接暴露这个世界最独特的东西'],
-    ['twoAlt','做 2 个，但换个划分','我有别的职业组合想法']
-  ]));
-
-  /* ---- 倒计时 ---- */
-  const s6 = section('⑥','一个具体机制：翻面倒计时','方案 A 和 C 都依赖"翻面倒计时"——它会给玩家时限压力。想确认一下这个能不能接受。');
-  s6.appendChild(optionGroup('timer','翻面倒计时',[
-    ['yes','能接受','有时限才有紧张感，这正是"刷"的张力来源'],
-    ['soft','可以但要软一点','给足预告和准备时间，不要突然袭击'],
-    ['no','不接受','不想在 demo 里加时限压力']
-  ]));
+  /* ---- ④⑤⑥：三节具体决策（数据驱动；section() 会自动挂载） ---- */
+  const secMeta = {
+    '④': ['两座岛怎么分工','把两种倾向各自主导一次，比"每座岛都五五开"更好——各自都有一个能证明自己的舞台。'],
+    '⑤': ['职业方案','两个职业的差异不是"战士 vs 法师"的数值差异，而是<b>两种与世界的关系</b>。'],
+    '⑥': ['翻面倒计时','方案 A 和 C 都依赖"翻面倒计时"——它会给玩家时限压力。这里把它拆成四个小决定，逐个选。']
+  };
+  const secBox = {
+    '④': '<b>岛 1 · 老家</b>（教学 + 情感锚点）：走动、战斗基础、第一次"安全的翻面"、1 个 NPC 关系。'+
+         '配比 <b>叙事 40% / 战斗 35% / 探索 25%</b>。<br><br>'+
+         '<b>岛 2 · 展示岛</b>（完整机制 + 可刷内容）：完整平衡度系统、可重复的远征（2–3 种目标）、可刷资源与敌人、'+
+         '<b>一次大翻面事件（3 种解法）</b>、1 个 boss、1 条支线、港口。'+
+         '配比 <b>战斗 50% / 探索 25% / 叙事 25%</b>。',
+    '⑤': '<b>职业 1 · 剑士</b>（强化自身漩涡）：低能量消耗、直接、成长清晰 → <b>改变自己</b>，服务于"刷起来有明确变强感"。<br><br>'+
+         '<b>职业 2 · 术士</b>（调用能量）：可施放影响<b>岛屿平衡度</b>的法术（抽取 / 稳定 / 催化）→ <b>改变世界</b>，'+
+         '玩家能直接操作世界状态，机制即叙事。<br><br>'+
+         '好处：差异不是"哪个伤害高"，而是<b>"你要不要为力量负责"</b>——选职业时其实是在选立场。',
+    '⑥': ''
+  };
+  ['④','⑤','⑥'].forEach(function(num){
+    const sec = section(num, secMeta[num][0], secMeta[num][1]);
+    if (secBox[num]) sec.appendChild(el('div','box', secBox[num]));
+    GROUPS.filter(function(g){ return g.sec === num; }).forEach(function(g){
+      sec.appendChild(optionGroup(g.key, g.title, g.opts));
+    });
+  });
 
   /* ---- 对方对比 ---- */
   if (other){
     const sc = section('⇄','对方的选择','这一节是对方通过回传链接带过来的答案。');
     sc.appendChild(el('div','cmp', cmpHtml()));
-    app.appendChild(sc);
   }
 
   updateProg();
@@ -611,14 +673,18 @@ function optionGroup(key, title, opts){
   return w;
 }
 function labelOf(key, val){
-  const map = {
-    synth:{accept:'接受',tune:'接受但想换心脏',reject:'不接受'},
-    islands:{accept:'接受',tune:'想调整',reject:'不接受'},
-    jobs:{two:'2 个（剑士/术士）',one:'只做 1 个',twoAlt:'2 个但换划分'},
-    timer:{yes:'能接受',soft:'可以但要软一点',no:'不接受'}
-  };
-  return (map[key]&&map[key][val])||val;
+  if (key === 'synth'){
+    const m = {accept:'接受',tune:'接受但想换心脏',reject:'不接受'};
+    return m[val] || val;
+  }
+  const g = GROUPS.filter(function(x){ return x.key === key; })[0];
+  if (g){
+    const o = g.opts.filter(function(x){ return x[0] === val; })[0];
+    if (o) return o[1];
+  }
+  return val;
 }
+function groupTitle(g){ return g.title.replace(/^[④⑤⑥]-[A-D] · /, ''); }
 
 /* =========================================================
    对比汇总
@@ -633,12 +699,17 @@ function cmpHtml(){
     if (df>=2||dn>=2) diff.push(s.id+' · '+s.name+'（你 刷'+(a.f||0)+'/叙'+(a.n||0)+'，对方 刷'+b.f+'/叙'+b.n+'）');
     else if (df<=1&&dn<=1) same.push(s.id+' · '+s.name);
   });
-  [['synth','合成方案'],['islands','两岛分工'],['jobs','职业'],['timer','翻面倒计时']].forEach(function(p){
-    if (my[p[0]] && other[p[0]]) {
-      if (my[p[0]]===other[p[0]]) same.push(p[1]+'：都是「'+labelOf(p[0],my[p[0]])+'」');
-      else diff.push(p[1]+'：你选「'+labelOf(p[0],my[p[0]])+'」，对方选「'+labelOf(p[0],other[p[0]])+'」');
+  GROUPS.forEach(function(g){
+    if (my[g.key] && other[g.key]) {
+      const t = groupTitle(g);
+      if (my[g.key] === other[g.key]) same.push(t+'：都是「'+labelOf(g.key,my[g.key])+'」');
+      else diff.push(t+'：你选「'+labelOf(g.key,my[g.key])+'」，对方选「'+labelOf(g.key,other[g.key])+'」');
     }
   });
+  if (my.synth && other.synth) {
+    if (my.synth === other.synth) same.push('合成方案：都是「'+labelOf('synth',my.synth)+'」');
+    else diff.push('合成方案：你选「'+labelOf('synth',my.synth)+'」，对方选「'+labelOf('synth',other.synth)+'」');
+  }
   let h = '<h4>对方：'+(ROLE_NAME[other.role]||'未选身份')+'</h4>';
   h += '<div class="li"><b style="color:var(--ok)">一致 '+same.length+' 项</b>'+(same.length?'<br>'+same.map(esc).join('<br>'):'')+'</div>';
   h += '<div class="li" style="margin-top:10px"><b style="color:var(--warn)">分歧 '+diff.length+' 项</b>'+(diff.length?'<br>'+diff.map(esc).join('<br>'):'')+'</div>';
@@ -672,9 +743,13 @@ function build(){
   const nm = normMix(my.mix), msum = mixSum(my.mix);
   out += '\n■ Demo 配比\n  战斗 '+nm.battle+'% / 探索记录 '+nm.explore+'% / 叙事抉择 '+nm.story+'%' +
          (msum === 100 ? '' : '（权重 '+my.mix.battle+'/'+my.mix.explore+'/'+my.mix.story+' 归一化）') + '\n';
-  out += '\n■ 两座岛分工\n  '+(my.islands?('→ '+labelOf('islands',my.islands)):'（未选）')+'\n';
-  out += '\n■ 职业\n  '+(my.jobs?('→ '+labelOf('jobs',my.jobs)):'（未选）')+'\n';
-  out += '\n■ 翻面倒计时\n  '+(my.timer?('→ '+labelOf('timer',my.timer)):'（未选）')+'\n';
+  const secName = { '④':'两座岛怎么分工', '⑤':'职业方案', '⑥':'翻面倒计时' };
+  ['④','⑤','⑥'].forEach(function(num){
+    out += '\n■ ' + secName[num] + '\n';
+    GROUPS.filter(function(g){ return g.sec === num; }).forEach(function(g){
+      out += '  ' + groupTitle(g) + '：' + (my[g.key] ? '→ ' + labelOf(g.key, my[g.key]) : '（未选）') + '\n';
+    });
+  });
 
   if (other){
     out += '\n————————————————\n■ 与对方（'+(ROLE_NAME[other.role]||'未选身份')+'）的对比\n';
@@ -693,12 +768,17 @@ function cmpText(){
     if(df>=2||dn>=2) diff.push('  '+s.id+' 你 '+(a.f||0)+'/'+(a.n||0)+'，对方 '+b.f+'/'+b.n);
     else if(df<=1&&dn<=1) same.push('  '+s.id+' 看法接近');
   });
-  [['synth','合成方案'],['islands','两岛分工'],['jobs','职业'],['timer','倒计时']].forEach(function(p){
-    if(my[p[0]]&&other[p[0]]){
-      if(my[p[0]]===other[p[0]]) same.push('  '+p[1]+'：一致');
-      else diff.push('  '+p[1]+'：你「'+labelOf(p[0],my[p[0]])+'」/ 对方「'+labelOf(p[0],other[p[0]])+'」');
+  GROUPS.forEach(function(g){
+    if(my[g.key]&&other[g.key]){
+      const t = groupTitle(g);
+      if(my[g.key]===other[g.key]) same.push('  '+t+'：一致');
+      else diff.push('  '+t+'：你「'+labelOf(g.key,my[g.key])+'」/ 对方「'+labelOf(g.key,other[g.key])+'」');
     }
   });
+  if(my.synth&&other.synth){
+    if(my.synth===other.synth) same.push('  合成方案：一致');
+    else diff.push('  合成方案：你「'+labelOf('synth',my.synth)+'」/ 对方「'+labelOf('synth',other.synth)+'」');
+  }
   let t = '一致 '+same.length+' 项'+(same.length?'\n'+same.join('\n'):'')+'\n';
   t += '分歧 '+diff.length+' 项'+(diff.length?'\n'+diff.join('\n'):'')+'\n';
   return t;
@@ -729,8 +809,9 @@ function decode(s){
 function updateProg(){
   let total=0, done=0;
   SCHEMES.forEach(function(s){ total+=3; if(my.rate[s.id].f) done++; if(my.rate[s.id].n) done++; if(my.rank[s.id]) done++; });
-  total += 4;
-  ['synth','islands','jobs','timer'].forEach(function(k){ if(my[k]) done++; });
+  total += 1 + GROUP_KEYS.length;
+  if (my.synth) done++;
+  GROUP_KEYS.forEach(function(k){ if(my[k]) done++; });
   const g=q('prog'); if(g) g.textContent = '已填 '+done+' / '+total;
   const h=q('hint');
   if (h) h.textContent = done===0 ? '各自评一遍，然后把结果发给对方'
