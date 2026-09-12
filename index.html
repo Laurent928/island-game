@@ -83,6 +83,9 @@
   .badge{font-size:11.5px;padding:2px 8px;border-radius:99px;white-space:nowrap}
   .badge.ok{color:var(--ok);background:rgba(104,211,145,.13);border:1px solid rgba(104,211,145,.35)}
   .badge.no{color:var(--warn);background:rgba(246,173,85,.13);border:1px solid rgba(246,173,85,.35)}
+  .todo-tag{font-size:11px;font-weight:600;color:var(--warn);background:rgba(246,173,85,.12);
+    border:1px solid rgba(246,173,85,.40);padding:1px 7px;border-radius:99px;margin-left:7px;
+    vertical-align:middle;white-space:nowrap}
 
   /* 选项按钮组 */
   .opts{display:flex;flex-direction:column;gap:8px;margin-top:10px}
@@ -372,7 +375,8 @@ const my = {
 };
 GROUP_KEYS.forEach(function(k){ my[k] = null; });
 
-let other = null;   // 对方通过回传链接载入的答案
+let other = null;          // 对方通过回传链接载入的答案
+let manuallyHidden = false; // 填完之后手动收起（默认在"自己填完"后自动显示对方的答案）
 
 const KEY = 'gameplay_vote_v1';
 const ROLE_NAME = { dev:'程序侧', art:'创作侧' };
@@ -449,11 +453,78 @@ function section(n, title, desc){
   return s;
 }
 
+/* =========================================================
+   完成度闸门
+   —— 对方的内容只在「自己全部填完」之后才显示。
+   —— 目的：避免先看到对方的理由而被带着走，让作答失去独立性。
+   ========================================================= */
+function completionItems(){
+  const items = [];
+  if (!my.role) items.push('选择你的身份');
+  SCHEMES.forEach(function(s){
+    const r = my.rate[s.id] || {};
+    if (!r.f || !r.n) items.push('给方案 ' + s.id + ' 打分（可玩性 + 叙事密度）');
+    if (!my.rank[s.id]) items.push('给方案 ' + s.id + ' 排顺序');
+  });
+  if (!my.synth) items.push('对合成方案表态');
+  GROUPS.forEach(function(g){ if (!my[g.key]) items.push(groupTitle(g)); });
+  return items;
+}
+function isComplete(){ return completionItems().length === 0; }
+function isRevealed(){ return !!other && isComplete() && !manuallyHidden; }
+
+/* 闸门提示条 */
+function renderOtherGate(){
+  const w = el('div');
+  w.style.cssText = 'border-radius:14px;padding:14px 16px;margin:0 0 20px;font-size:14px;line-height:1.75';
+  const items = completionItems();
+  const who = ROLE_NAME[other.role] || '对方';
+
+  if (items.length){
+    /* ---- 还没填完：锁住 ---- */
+    w.style.background = 'rgba(246,173,85,.10)';
+    w.style.border = '1px solid rgba(246,173,85,.42)';
+    const show = items.slice(0, 6).map(function(t){ return '· ' + esc(t); }).join('<br>');
+    w.innerHTML =
+      '<b>🔒 对方也填了，但<b>要等你填完才能看</b></b><br>' +
+      '<span style="color:var(--mut);font-size:13px">' +
+      '先看到对方的理由，很容易被带着走——那样这一页就白填了。所以它锁到你填完为止。<br>' +
+      '还差 <b>' + items.length + '</b> 项没填（下面标「未填」的就是）：</span>' +
+      '<div style="color:var(--mut);font-size:13px;margin-top:8px;line-height:1.95">' + show +
+      (items.length > 6 ? '<br>· …还有 ' + (items.length - 6) + ' 项' : '') + '</div>';
+    app.appendChild(w);
+    return;
+  }
+
+  /* ---- 已经填完 ---- */
+  w.style.background = 'rgba(79,209,197,.10)';
+  w.style.border = '1px solid rgba(79,209,197,.40)';
+  if (manuallyHidden){
+    w.innerHTML = '<b>🙈 对方的答案已收起</b><br>' +
+      '<span style="color:var(--mut);font-size:13px">你已经填完了，随时可以再看。</span>';
+    const b = el('button','b-main','👁 显示对方的答案');
+    b.style.marginTop = '10px';
+    b.addEventListener('click', function(){ manuallyHidden = false; render(); });
+    w.appendChild(b);
+  } else {
+    w.innerHTML = '<b>✅ 你已经填完了 —— 下面是' + esc(who) + '的答案</b><br>' +
+      '<span style="color:var(--mut);font-size:13px">往下看「对方的选择」那一节：标出了一致、分歧，以及双方向的「想法对照」。</span>';
+    const b = el('button','b-ghost','🙈 先收起来');
+    b.style.marginTop = '10px';
+    b.addEventListener('click', function(){ manuallyHidden = true; render(); });
+    w.appendChild(b);
+  }
+  app.appendChild(w);
+}
+
 function render(){
   app.innerHTML = '';
 
+  /* ---- 对方的答案：自己填完之前完全锁住 ---- */
+  if (other) renderOtherGate();
+
   /* ---- 身份 ---- */
-  const s0 = section('★','先选你是谁','这一页两个人都会打开，各评一遍；选好身份后，对方打开你的链接时页面会自动标出一致与分歧。');
+  const s0 = section('★','先选你是谁','这一页两个人都会打开，各评一遍。对方打开你的链接时，你的答案会**先隐藏**，等他也填完再一起看对比。');
   const roles = el('div','roles');
   [['dev','程序侧','实现 / 数值 / 系统'],['art','创作侧','世界观 / 美术 / 文案 / 体验']].forEach(function(r){
     const d = el('div','role'+(my.role===r[0]?' on':''));
@@ -652,8 +723,8 @@ function render(){
     });
   });
 
-  /* ---- 对方对比 ---- */
-  if (other){
+  /* ---- 对方对比（必须先自己填完） ---- */
+  if (isRevealed()){
     const sc = section('⇄','对方的选择','这一节是对方通过回传链接带过来的答案。');
     sc.appendChild(el('div','cmp', cmpHtml()));
   }
@@ -677,7 +748,8 @@ function rater(id, kind){
 function optionGroup(key, title, opts){
   const w = el('div');
   w.appendChild(el('h4', null, '')).innerHTML = '';
-  const h = el('div', null, '<b style="font-size:15px">'+title+'</b>');
+  const h = el('div', null, '<b style="font-size:15px">'+title+'</b>' +
+    (my[key] ? '' : ' <span class="todo-tag">未填</span>'));
   h.style.margin = '14px 0 2px';
   w.appendChild(h);
   const box = el('div','opts');
@@ -717,12 +789,12 @@ function optionGroup(key, title, opts){
     w.appendChild(add);
   }
 
-  if (other && other[key] && my[key]){
+  if (isRevealed() && other[key] && my[key]){
     const same = other[key]===my[key];
     w.appendChild(el('div', null, '<div style="margin-top:8px"><span class="badge '+(same?'ok':'no')+'">'+
       (same?'与对方一致':'与对方不同：对方选了「'+(labelOf(key,other[key]))+'」')+'</span></div>'));
   }
-  if (other){
+  if (isRevealed()){
     const on = noteOf(other, key);
     if (on) w.appendChild(el('div','note-cmp','<b>对方的想法</b><br>'+esc(on)));
   }
@@ -825,7 +897,7 @@ function build(){
     });
   });
 
-  if (other){
+  if (isRevealed()){
     out += '\n————————————————\n■ 与对方（'+(ROLE_NAME[other.role]||'未选身份')+'）的对比\n';
     out += cmpText();
   }
@@ -917,7 +989,7 @@ function updateProg(){
   const g=q('prog'); if(g) g.textContent = '已填 '+done+' / '+total;
   const h=q('hint');
   if (h) h.textContent = done===0 ? '各自评一遍，然后把结果发给对方'
-    : (other ? '对方答案已载入 —— 看一下下面的「对方的选择」' : '填完点左边，生成回传链接发给对方');
+    : (other ? (isComplete() ? (manuallyHidden ? '对方的答案已收起 —— 点上面按钮可再看' : '已填完，对方的答案在下面') : '你还没填完 —— 填完之后才能看到对方的答案') : '填完点左边，生成回传链接发给对方');
 }
 
 /* =========================================================
@@ -1015,12 +1087,6 @@ load();
 })();
 render();
 updateProg();
-if (other){
-  const w = el('div');
-  w.style.cssText='background:rgba(79,209,197,.12);border:1px solid rgba(79,209,197,.4);border-radius:12px;padding:11px 13px;margin:0 0 16px;font-size:13.5px';
-  w.innerHTML='✅ 已载入对方的答案 —— 往下看「<b>对方的选择</b>」一节，那里标出了一致与分歧点。';
-  app.insertBefore(w, app.firstChild);
-}
 </script>
 </body>
 </html>
