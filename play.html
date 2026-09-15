@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>玩法设定 V1.0 · 请你过一遍</title>
+<style>
+  :root{
+    --bg:#0b1a2b; --bg2:#102639; --card:#132c44; --card2:#183650;
+    --line:#26536f; --txt:#eaf2f8; --mut:#9ab4c9; --mut2:#71889c;
+    --acc:#e8c07d; --acc2:#d9a441; --soft:#4fd1c5;
+    --good:#68d391; --bad:#f6ad55;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;padding:0 0 calc(150px + env(safe-area-inset-bottom,0px));
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+    background:linear-gradient(180deg,#07121d 0%,var(--bg) 35%,var(--bg2) 100%);
+    background-attachment:fixed;color:var(--txt);line-height:1.85;font-size:16.5px}
+  .wrap{max-width:820px;margin:0 auto;padding:0 20px}
+  header{padding:38px 0 8px}
+  h1{font-size:27px;margin:0 0 12px;font-weight:700;line-height:1.4}
+  h1 .em{color:var(--acc)}
+  .lead{background:rgba(232,192,125,.09);border-left:3px solid var(--acc);
+    border-radius:0 12px 12px 0;padding:14px 18px;margin:16px 0 24px;font-size:15px;color:#dbe7f0}
+  .lead b{color:var(--acc)}
+
+  .part{margin:38px 0 0}
+  .part-t{display:flex;align-items:center;gap:12px;margin:0 0 4px;padding-bottom:10px;border-bottom:2px solid var(--line)}
+  .part-n{width:32px;height:32px;flex:0 0 32px;border-radius:10px;background:linear-gradient(135deg,var(--acc2),var(--acc));
+    color:#20160a;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px}
+  .part-t h2{margin:0;font-size:20px}
+
+  /* 设定文档 */
+  .doc{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin:16px 0}
+  .doc h3{margin:0 0 10px;font-size:17.5px;color:var(--soft);font-weight:650}
+  .doc p{margin:0 0 12px}
+  .doc p:last-child{margin-bottom:0}
+  .doc ul{margin:8px 0 12px;padding-left:22px;color:#d3e2ee}
+  .doc li{margin:5px 0}
+  .doc b{color:var(--acc)}
+  .doc .hi{background:rgba(232,192,125,.11);border-radius:8px;padding:10px 13px;margin:12px 0;font-size:15.5px}
+  .doc .row{display:flex;gap:10px;align-items:baseline;margin:7px 0}
+  .doc .k{flex:0 0 auto;color:var(--mut2);font-size:14px}
+  .steps{counter-reset:s;list-style:none;padding-left:0;margin:10px 0}
+  .steps li{counter-increment:s;position:relative;padding-left:34px;margin:10px 0}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:2px;width:23px;height:23px;border-radius:50%;
+    background:rgba(232,192,125,.16);border:1px solid rgba(232,192,125,.5);color:var(--acc);
+    font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .faces{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+  .face{background:#0d2134;border:1px solid #1f4560;border-radius:12px;padding:13px 15px}
+  .face h4{margin:0 0 8px;font-size:14.5px;color:var(--soft)}
+  .face p{margin:5px 0;font-size:14px;color:#cddced}
+  .face .lb{color:var(--mut2);font-size:13px}
+  @media (max-width:560px){ .faces{grid-template-columns:1fr} }
+
+  .loop{background:rgba(79,209,197,.08);border:1px solid rgba(79,209,197,.35);border-radius:14px;
+    padding:16px 18px;margin:14px 0;font-size:16.5px;line-height:2.1;color:#dff0f5;text-align:center}
+  .loop b{color:var(--soft)}
+
+  /* 问题 */
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 20px 16px;margin:0 0 18px}
+  .q.answered{border-color:rgba(232,192,125,.5);background:var(--card2)}
+  .q-n{font-size:12.5px;color:var(--acc);font-weight:700;letter-spacing:1px;margin-bottom:6px}
+  .q-t{font-size:19px;font-weight:650;margin:0 0 12px;line-height:1.6}
+  .quote{border-left:3px solid var(--line);padding:8px 0 8px 13px;margin:0 0 12px;
+    font-size:14.5px;color:var(--mut);background:rgba(255,255,255,.02);border-radius:0 8px 8px 0}
+  .quote .lb{display:block;font-size:12px;color:var(--mut2);letter-spacing:.5px;margin-bottom:3px}
+  .why{font-size:14.5px;color:#c9dbe8;margin:0 0 14px}
+  .why b{color:var(--bad)}
+
+  .opts{display:flex;flex-direction:column;gap:11px}
+  .opt{background:#0d2134;border:1.5px solid #1f4560;border-radius:13px;padding:13px 15px;
+    cursor:pointer;transition:all .15s;user-select:none}
+  .opt:hover{border-color:#33698a;background:#102a40}
+  .opt.on{border-color:var(--acc);background:linear-gradient(135deg,rgba(232,192,125,.13),rgba(232,192,125,.04))}
+  .opt-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .tick{width:20px;height:20px;flex:0 0 20px;border-radius:50%;border:1.8px solid #41718f;
+    display:flex;align-items:center;justify-content:center;font-size:12px;color:#102a40;font-weight:800}
+  .opt.on .tick{background:var(--acc);border-color:var(--acc)}
+  .rec{font-size:11.5px;font-weight:700;color:#20160a;background:var(--acc);padding:2px 8px;border-radius:99px}
+  .opt .l{font-size:16px;font-weight:650;flex:1;min-width:150px}
+  .opt .d{font-size:14px;color:var(--mut);margin:7px 0 0}
+  .gg{display:flex;gap:8px;margin-top:9px;font-size:13.5px;line-height:1.7}
+  .gg .tag{flex:0 0 auto;font-weight:700}
+  .gg .g{color:var(--good)} .gg .b{color:var(--bad)}
+  .gg .txt{color:#bdd0e0}
+
+  textarea{width:100%;background:#0d2134;border:1.5px solid #1f4560;border-radius:12px;
+    color:var(--txt);padding:12px 14px;font-size:15px;font-family:inherit;
+    resize:vertical;min-height:70px;line-height:1.75;margin-top:13px}
+  textarea:focus{outline:none;border-color:var(--acc)}
+  input[type=text]{width:100%;background:#0d2134;border:1.5px solid #1f4560;border-radius:12px;
+    color:var(--txt);padding:12px 14px;font-size:16px;font-family:inherit}
+  input[type=text]:focus{outline:none;border-color:var(--acc)}
+
+  .bar{position:sticky;top:0;z-index:50;background:rgba(7,18,29,.94);backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);padding:9px 0}
+  .bar .wrap{display:flex;align-items:center;gap:12px}
+  .track{flex:1;height:7px;background:#0a1d2e;border-radius:99px;overflow:hidden;border:1px solid #1d3d57}
+  .fill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--acc2),var(--acc));transition:width .3s}
+  .cnt{font-size:13px;color:var(--mut);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+  .actions{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(7,18,29,.96);
+    backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:12px 0 calc(12px + env(safe-area-inset-bottom,0px))}
+  .actions .wrap{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  button{font-family:inherit;font-size:15px;font-weight:650;cursor:pointer;border-radius:12px;
+    padding:12px 22px;border:1.5px solid transparent;transition:all .15s}
+  .b-main{background:linear-gradient(135deg,var(--acc2),var(--acc));color:#20160a}
+  .b-main:hover{filter:brightness(1.07)}
+  .b-ghost{background:transparent;border-color:#2f5f7d;color:var(--mut)}
+  .b-ghost:hover{border-color:var(--acc);color:var(--acc)}
+  .hint{color:var(--mut2);font-size:12.5px;flex:1;min-width:120px}
+
+  #result{display:none;margin-top:34px;background:var(--card);border:1px solid rgba(232,192,125,.4);
+    border-radius:16px;padding:20px}
+  #result h3{margin:0 0 8px;font-size:18px;color:var(--acc)}
+  #out{width:100%;min-height:300px;font-size:13px;font-family:ui-monospace,Consolas,monospace;
+    line-height:1.7;white-space:pre;overflow-x:auto;background:#0d2134;border:1.5px solid #1f4560;
+    border-radius:12px;color:var(--txt);padding:12px 14px;resize:vertical}
+  .r-btns{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .copied{color:var(--good);font-size:13.5px;align-self:center}
+  footer{text-align:center;color:var(--mut2);font-size:12.5px;margin:46px 0 12px;line-height:1.9}
+  @media (max-width:560px){
+    h1{font-size:22px} .q-t{font-size:17.5px} .wrap{padding:0 15px} body{font-size:16px}
+    .doc{padding:17px 16px}
+  }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="wrap">
+    <div class="track"><div class="fill" id="fill"></div></div>
+    <div class="cnt" id="cnt">0 / 8</div>
+  </div>
+</div>
+
+<header class="wrap">
+  <h1>玩法设定 V1.0 · <span class="em">请你过一遍</span></h1>
+  <div class="lead">
+    <b>这次不一样</b>：上面这份是<b>具体的玩法草案</b>——玩家按什么键、岛上会发生什么，都写出来了。
+    你只要读一遍，然后回答下面 <b>8 个问题</b>。<br>
+    <b>每个问题都已经给了 2–3 个方案</b>，还写了每个方案的好处和代价。你不需要自己想方案，
+    说"我选 A"就行；如果都不对，写"我想要别的"。
+  </div>
+</header>
+
+<div class="part wrap">
+  <div class="part-t"><div class="part-n">上</div><h2>先读：这款游戏具体怎么玩</h2></div>
+</div>
+<main class="wrap" id="doc"></main>
+
+<div class="part wrap" style="margin-top:44px">
+  <div class="part-t"><div class="part-n">下</div><h2>再答：8 个问题</h2></div>
+  <p style="color:var(--mut2);font-size:14px;margin:12px 0 0">
+    不用全答。<b>只答第 1、3、7 题也够开工。</b>每题都可以在下面写自己的想法。
+  </p>
+</div>
+<main class="wrap" id="app"></main>
+
+<div class="actions">
+  <div class="wrap">
+    <button class="b-main" id="gen">生成我的回答</button>
+    <button class="b-ghost" id="selall">全选文字</button>
+    <button class="b-ghost" id="reset">清空</button>
+    <span class="hint" id="hint">答完之后，把结果发给他就行</span>
+  </div>
+</div>
+
+<footer class="wrap">这份不是考卷 —— 觉得哪块写得不对，直接说"这块不对"，比选选项更有用。</footer>
+
+<script>
+/* =========================================================
+   上半：玩法设定（读的部分）
+   ========================================================= */
+const DESIGN = [
+  { h:'一、你是谁', html:
+    '<p>你是<b>航海士</b>。有一艘船（师傅给的，很破）。</p>' +
+    '<p>你身上有一样别人没有的东西：<b>你能感觉到一座岛稳不稳</b>。就像老水手能感觉到天气要变——' +
+    '你站在岸上，就知道这座岛离翻面还有多久。</p>' +
+    '<p>这个能力让你能提前做准备。但它也让你<b>无法假装看不见</b>。</p>' },
+
+  { h:'二、你在游戏里具体做七件事', html:
+    '<ul>' +
+    '<li><b>掌舵</b>：在海图上点一个目的地，开过去。路上会有事（天气、海怪、漂来的东西）</li>' +
+    '<li><b>上岸</b>：在岛上走动，和人说话，进屋子、下洞</li>' +
+    '<li><b>探</b>：找资源、找遗迹、找路。有些东西只在特定时候出现</li>' +
+    '<li><b>打</b>：遇到怪就打。<b>指令式</b>——选攻击、技能、道具</li>' +
+    '<li><b>施</b>：用"风"。这是你唯一的法术资源，<b>从脚下的土地里吸</b></li>' +
+    '<li><b>记</b>：把见到的记进航海日志（岛的形状、特产、怪物、航线）</li>' +
+    '<li><b>选</b>：关键时刻做决定。有些决定改不回来</li>' +
+    '</ul>' },
+
+  { h:'三、战斗具体是什么样', html:
+    '<p><b>指令式</b>。回合或半即时，敌人多的时候按速度排顺序。每个回合你能选四件事：</p>' +
+    '<ul><li><b>普通攻击</b>（不耗"风"）</li><li><b>技能</b>（耗体力，不耗"风"）</li>' +
+    '<li><b>用"风"</b>（很强，但会抽干脚下的地）</li><li><b>道具 / 撤离</b></li></ul>' +
+    '<p><b>敌人有弱点</b>：怕火、怕水、怕风。打中弱点会<b>打断</b>敌人的动作——所以"试弱点"本身就是玩法。</p>' +
+    '<p>你有两条槽：<b>体力</b>（会掉血，会死）和 <b>"风"</b>（施法资源，用完就没了，得回岸上补）。</p>' +
+    '<p>序章只有你一个人。后面会有伙伴。</p>' },
+
+  { h:'四、核心机制：「风」和平衡度', html:
+    '<p>每座岛有一个数字：<b>平衡度</b>，0 到 100。你在岛上做的事会让它往下掉。</p>' +
+    '<div class="row"><span class="k">70–100</span><span>正常。天亮、风平、人和动物都正常</span></div>' +
+    '<div class="row"><span class="k">40–70</span><span>开始不稳。天色偏灰、鸟往别处飞、有些地方起雾</span></div>' +
+    '<div class="row"><span class="k">10–40</span><span>生态失控。怪变强、地面开裂、植物变形</span></div>' +
+    '<div class="row"><span class="k">0</span><span><b>翻面</b>。整座岛变成另一个样子</span></div>' +
+    '<p style="margin-top:14px"><b>什么会让它掉：</b></p>' +
+    '<ul><li>用"风"施法 —— <b>掉得多</b></li><li>大量杀生 —— 掉一点</li>' +
+    '<li>把一片资源点采空 —— 掉一点</li><li>打赢盘踞在岛上的霸主 —— <b>掉很多</b></li></ul>' +
+    '<p><b>什么能让它涨（解压阀）：</b>找到并修复符文 / 把采走的东西还回祭坛 / 完成稳住岛的支线。</p>' +
+    '<div class="hi"><b>于是产生一个真正的两难</b>：<br>' +
+    '用"风"你就打得过，但岛会更快翻面；不用"风"，你可能根本过不去。<br>' +
+    '这不是道德说教——这是<b>每次战斗都要做的算术</b>。</div>' },
+
+  { h:'五、翻面会发生什么', html:
+    '<p>翻面<b>不是突然的</b>，它有过程：</p>' +
+    '<div class="row"><span class="k">前 1–2 天</span><span>天象变（云、星、潮水）；动物开始迁走</span></div>' +
+    '<div class="row"><span class="k">前几小时</span><span>地上出现异常现象：裂缝、怪吼、植物变色</span></div>' +
+    '<div class="row"><span class="k">最后一段</span><span>只有天象和氛围，<b>不给数字倒计时</b>，玩家自己判断</span></div>' +
+    '<div class="row"><span class="k">翻面</span><span><b>一瞬间</b>。地貌、生态、怪、资源，全换</span></div>' +
+    '<div class="row"><span class="k">之后</span><span>没躲进庇护所的人会被扭曲；外面的人会受伤</span></div>' +
+    '<p style="margin-top:12px"><b>躲哪里能保住命</b>：符文旁边、地标附近（那里像暴风眼，中心是静的）。</p>' },
+
+  { h:'六、一座岛的「两个面」具体长什么样', html:
+    '<p>拿展示岛举例：</p>' +
+    '<div class="faces">' +
+      '<div class="face"><h4>A 面（翻面前）</h4>' +
+        '<p><span class="lb">地貌：</span>长满密林，有条河</p>' +
+        '<p><span class="lb">村子：</span>下游小村，人靠打渔采药</p>' +
+        '<p><span class="lb">地标：</span>岛中心一座<b>符文塔</b></p>' +
+        '<p><span class="lb">能拿到：</span>药草、木材、鱼</p>' +
+        '<p><span class="lb">怪：</span>林间的兽</p></div>' +
+      '<div class="face"><h4>B 面（翻面后）</h4>' +
+        '<p><span class="lb">地貌：</span><b>干燥的沙漠</b>，河床干了</p>' +
+        '<p><span class="lb">村子：</span>只剩残墙</p>' +
+        '<p><span class="lb">地标：</span>半截埋在沙里的塔尖</p>' +
+        '<p><span class="lb">能拿到：</span><b>地下的古代遗迹</b>（A 面拿不到）</p>' +
+        '<p><span class="lb">怪：</span>沙里的东西</p></div>' +
+    '</div>' +
+    '<p><b>两面都在的那一个东西</b>：村口那棵枯树。A 面它是绿的，B 面它是焦的。' +
+    '<b>玩家靠它认出"这还是那座岛"。</b></p>' },
+
+  { h:'七、倒下之后会怎样', html:
+    '<ul>' +
+    '<li>体力空了 → 倒下</li>' +
+    '<li>倒下后<b>灵魂还在，但开始流失</b></li>' +
+    '<li><b>附近有符文 / 队友 / 庇护所</b> → 能拉回来。损失一些资源和一段记忆</li>' +
+    '<li><b>独自倒在无人海域</b> → 灵魂流失，被附近的什么东西吃掉一部分。<b>会丢东西</b></li>' +
+    '<li><b>被"世界之风"侵蚀而死</b> → <b>永久死亡</b>。这是这个世界唯一的真死</li>' +
+    '</ul>' +
+    '<div class="hi">意思是：<b>普通战斗输了不致命，但输在海上是要付账的。</b></div>' },
+
+  { h:'八、你怎么变强', html:
+    '<p><b>第一条：数值。</b>等级、装备、素材。靠打怪和探。</p>' +
+    '<p><b>第二条：记录（这条更重要）。</b>你记下的东西会变成能力：</p>' +
+    '<div class="row"><span class="k">记下航线</span><span>以后可以直航，省时间、少遇险</span></div>' +
+    '<div class="row"><span class="k">记下一种怪</span><span>能看到它的弱点和剩余血量</span></div>' +
+    '<div class="row"><span class="k">记下地形</span><span>地图上会标出资源点</span></div>' +
+    '<div class="row"><span class="k">记下一条海流</span><span>航行更快，能走原来走不了的路</span></div>' +
+    '<div class="hi"><b>记下的东西越多，你在那片海上越"稳"。</b><br>' +
+    '因为这个世界靠"被记住"来确认自己存在——<b>你写下它，它就还在。</b></div>' },
+
+  { h:'九、序章具体长什么样', html:
+    '<p><b>岛 1 · 老家（约 20 分钟）</b></p>' +
+    '<ol class="steps">' +
+      '<li>开场：你在修船。师傅走过来，说了一句话，把船给你。</li>' +
+      '<li>教学：走动、对话、采集。教你怎么看岛稳不稳。</li>' +
+      '<li>第一次战斗：海边几只小怪。教指令式战斗和弱点。</li>' +
+      '<li>第一次翻面（<b>安全的</b>）：师傅带你去岛的另一头，你亲眼看到一小片地貌翻过去。天变了一下，又变回来。<b>只是看，不会受伤。</b></li>' +
+      '<li>回村，夜里。</li>' +
+      '<li><b>第二天早上，码头那边翻面了。</b>这次是<b>你无法阻止的</b>。师傅为了护住符文塔没回来。</li>' +
+      '<li><b>你上船，出海。</b></li>' +
+    '</ol>' +
+    '<p style="margin-top:16px"><b>岛 2 · 展示岛（约 40–60 分钟）</b></p>' +
+    '<ol class="steps">' +
+      '<li>抵达。港口。接第一个委托。</li>' +
+      '<li>自由探索：村子、密林、河、符文塔遗迹。可以采集、可以打怪、可以和人聊天。</li>' +
+      '<li>发现岛在变得不稳（天象开始变了）。</li>' +
+      '<li><b>关键事件</b>：村里人求你帮他们<b>修符文塔</b>，把岛稳住；同时，一支外来商队想让你帮他们<b>催翻面</b>——因为翻面后地下会露出遗迹，那值很多钱。</li>' +
+      '<li><b>你选</b>：帮村里人 / 帮商队 / 谁也不帮，只拿走自己要的</li>' +
+      '<li>无论选什么，<b>最后都会翻面</b>（或者差点翻面），岛变成另一个样子。</li>' +
+      '<li><b>世界记住你的选择。</b>下次回来，村子还在，或者不在了。</li>' +
+    '</ol>' },
+
+  { h:'十、一整章的走法（这就是游戏循环）', html:
+    '<div class="loop">' +
+    '出海 → 航程（路上有事）→ 抵岛 → 上岸探 → 遇到人和事 → 打 → 岛开始不稳 → 做决定 → <b>翻面</b> → 岛变样 → 带着变化回港 → 下一个目的地' +
+    '</div>' +
+    '<p style="text-align:center;color:var(--mut2)">每一座岛，就是一章。</p>' }
+];
+
+/* =========================================================
+   下半：8 个问题（每个都带方案）
+   ========================================================= */
+const QS = [
+  { id:'p1', t:'用「风」施法，该不该让岛屿变不稳？',
+    quote:'用"风"施法 → 平衡度掉得多。于是产生两难：用风你就打得过，但岛会更快翻面。',
+    why:'这是整个玩法最亮的一句话，但它也意味着玩家可能舍不得用法术，法术就成了摆设。',
+    opts:[
+      { k:'A', rec:true, l:'用风就掉平衡度', d:'打得越狠，岛越早翻面',
+        good:'每一次施法都是一次选择；「人祸」变成玩家自己的行为，而不是设定里的一句话',
+        bad:'玩家可能舍不得用，法术变摆设' },
+      { k:'B', l:'不掉。只有大型行为才掉', d:'布符文、仪式、催化翻面 才掉',
+        good:'战斗爽快，没有心理负担',
+        bad:'少一层张力；最亮的那句话没了' },
+      { k:'C', l:'不掉，但翻面时算总账', d:'用得越多，翻面后的岛越糟',
+        good:'打得爽 + 迟来的后果',
+        bad:'因果隔得远，玩家可能意识不到是自己造成的' },
+      { k:'other', l:'我想要别的', d:'写在下面' }
+    ] },
+
+  { id:'p2', t:'翻面之前，玩家能提前知道多久？',
+    quote:'前 1–2 天有天象和动物迁徙；最后几小时有异常现象；不给数字倒计时，玩家得自己判断。',
+    why:'给不给倒计时，决定了这游戏是「紧张」还是「清楚」——两者很难兼得。',
+    opts:[
+      { k:'A', rec:true, l:'有天象、动物、地貌这些前兆，但不给数字', d:'给 1–2 天准备时间',
+        good:'玩家有时间准备（撤离/抢收/布符文），但要自己判断',
+        bad:'有人会没看懂，翻面时手忙脚乱' },
+      { k:'B', l:'给明确数字（"还有 3 天"）', d:'',
+        good:'最清楚，谁都不会误判',
+        bad:'像任务计时器，破坏氛围' },
+      { k:'C', l:'完全没有前兆，突然翻面', d:'',
+        good:'震撼',
+        bad:'玩家会觉得不公平、被耍了' },
+      { k:'other', l:'我想要别的', d:'写在下面' }
+    ] },
+
+  { id:'p3', t:'翻面之后，原来那面的人怎么办？',
+    quote:'没躲进庇护所的人会被扭曲；外面的人会受伤。',
+    why:'这一条决定了这个游戏有多重，也是「为了材料让一村人没了家」这句话能不能成立的前提。',
+    opts:[
+      { k:'A', rec:true, l:'没走的会被扭曲，变成敌人；走了的变成船民', d:'',
+        good:'道德分量最重；玩家的每个决定都有重量',
+        bad:'比较残酷，玩家会难受' },
+      { k:'B', l:'会被「转到」另一面继续活着', d:'两面的人各过各的',
+        good:'不残忍，玩家不背负',
+        bad:'翻面失去分量，变成"换地图"' },
+      { k:'C', l:'随翻面一起「换形态」', d:'人变成另一种东西，但不是死',
+        good:'奇观感强，很有这个世界的气质',
+        bad:'玩家可能看不懂，也不觉得愧疚' },
+      { k:'other', l:'我想要别的', d:'写在下面' }
+    ] },
+
+  { id:'p4', t:'玩家能不能主动「催」翻面？',
+    quote:'外来商队想让你帮他们催翻面——因为翻面后地下会露出遗迹，那值很多钱。',
+    why:'能不能主动作恶，是「玩家是应对者」还是「玩家是共犯」的分界线。',
+    opts:[
+      { k:'A', rec:true, l:'能。花资源推动某座岛翻面', d:'为了拿 B 面独有的资源',
+        good:'整个游戏最强的道德选择',
+        bad:'要专门做一套"催化"的内容' },
+      { k:'B', l:'不能，翻面只能被动接受', d:'',
+        good:'省事，玩家永远是应对者',
+        bad:'少了主动作恶的可能，戏剧性减一半' },
+      { k:'C', l:'能，但代价是自己的失衡值上升', d:'离"被扭曲"更近一步',
+        good:'保留主动作恶，又加一层对自己的风险',
+        bad:'多一个要平衡的系统' },
+      { k:'other', l:'我想要别的', d:'写在下面' }
+    ] },
+
+  { id:'p5', t:'战斗是「打完就完」还是「有得刷」？',
+    quote:'翻面前 / 翻面后是两套怪和两套资源，所以同一座岛有得刷。',
+    why:'这是「战斗刷刷刷」和「电影化叙事」这两件事的落点。',
+    opts:[
+      { k:'A', rec:true, l:'同一座岛翻面前后，两套怪和资源', d:'',
+        good:'一张地图两份内容；想刷的人有得刷，成本还低',
+        bad:'每种怪要做两套数值' },
+      { k:'B', l:'打完就完，主要靠推进剧情', d:'',
+        good:'最省事，节奏紧凑',
+        bad:'没有重复游玩价值' },
+      { k:'C', l:'可以刷，但刷久了岛会不稳', d:'和问题 1 联动',
+        good:'刷有了意义和代价',
+        bad:'可能让想刷的人不敢刷' },
+      { k:'other', l:'我想要别的', d:'写在下面' }
+    ] },
+
+  { id:'p6', t:'主角倒下之后，代价要多重？',
+    quote:'有人拉就能回来；独自倒在无人海域会丢东西。被世界之风侵蚀而死 → 永久死亡。',
+    why:'死亡代价决定了远航是「冒险」还是「送死」。',
+    opts:[
+      { k:'A', rec:true, l:'会流失；有人拉就能回来，独自死在海上会丢东西', d:'',
+        good:'远航有分量，输在海上真要付账',
+        bad:'玩家可能觉得惩罚重' },
+      { k:'B', l:'直接回最近港口，不丢东西', d:'',
+        good:'最轻松，不打扰节奏',
+        bad:'"死亡"完全没重量' },
+      { k:'C', l:'倒下就少一段记忆', d:'忘掉一个已记录的图鉴或航线',
+        good:'很贴世界观：丢的是"记录"而不是"数值"',
+        bad:'玩家可能为了不丢记录而过于保守' },
+      { k:'other', l:'我想要别的', d:'写在下面' }
+    ] },
+
+  { id:'p7', t:'展示岛的结局，玩家能不能阻止翻面？',
+    quote:'村里人求你修符文塔稳住岛；商队求你催翻面。无论选什么，最后都会翻面。',
+    why:'玩家努力了却阻止不了，可能显得无力；但能阻止，就看不到另一面了。',
+    opts:[
+      { k:'A', rec:true, l:'不能阻止，但能决定代价由谁承担', d:'救村子 / 帮商队 / 只管自己',
+        good:'翻面一定发生，主题立住；玩家又有真实选择权',
+        bad:'会有"我努力了但没用"的挫败感，需要剧情接住' },
+      { k:'B', l:'玩家可以真的稳住，不翻面', d:'',
+        good:'努力有回报，玩家爽',
+        bad:'就看不到 B 面了；也削弱"翻面不可阻挡"的设定' },
+      { k:'C', l:'可以推迟，但不能取消', d:'',
+        good:'折中，努力有可见效果',
+        bad:'要多做一套"推迟后"的中间状态' },
+      { k:'other', l:'我想要别的', d:'写在下面' }
+    ] },
+
+  { id:'p8', t:'序章要几个结局？' ,
+    quote:'她之前说过想要更多结局。这里问的是「序章」的数量，后面每一章都可以再加。',
+    why:'结局数量直接决定要做多少内容。',
+    opts:[
+      { k:'A', rec:true, l:'2 个', d:'①你保住了村子，但岛还是翻了；②你拿走了遗迹的东西，村子没了',
+        good:'两种代价都尝到，成本可控', bad:'' },
+      { k:'B', l:'1 个', d:'无论怎么选你都得走，但世界留下的样子不一样',
+        good:'最省', bad:'可能觉得"选了半天结果一样"' },
+      { k:'C', l:'3 个', d:'再加一个"你把师傅的符文塔修好了"',
+        good:'多一条"最好"的路，玩家有盼头', bad:'多一套内容' },
+      { k:'other', l:'我想要别的', d:'写在下面' }
+    ] }
+];
+
+/* =========================================================
+   渲染
+   ========================================================= */
+const KEY = 'play_design_v1';
+const state = { name:'', answers:{}, notes:{} };
+const docEl = document.getElementById('doc');
+const app = document.getElementById('app');
+function el(tag, cls, html){ const e=document.createElement(tag); if(cls) e.className=cls; if(html!==undefined) e.innerHTML=html; return e; }
+function q(id){ return document.getElementById(id); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function answerOf(id){ return state.answers[id] || null; }
+function labelOf(id, val){
+  const Q = QS.filter(function(x){ return x.id===id; })[0];
+  if(!Q) return val;
+  const o = Q.opts.filter(function(x){ return x.k===val; })[0];
+  return o ? o.l : val;
+}
+
+/* 上半：设定 */
+DESIGN.forEach(function(sec){
+  const d = el('div','doc');
+  d.innerHTML = '<h3>' + esc(sec.h) + '</h3>' + sec.html;
+  docEl.appendChild(d);
+});
+
+/* 下半：问题 */
+function renderQuestions(){
+  app.innerHTML = '';
+
+  /* 名字 */
+  const nb = el('div','q');
+  nb.innerHTML = '<div class="q-n">先留个名字（选填）</div>' +
+    '<input type="text" id="who" placeholder="你叫什么都行" value="' + esc(state.name) + '">';
+  app.appendChild(nb);
+
+  QS.forEach(function(Q, i){
+    const card = el('div','q' + (answerOf(Q.id) ? ' answered' : ''));
+    card.id = 'card-' + Q.id;
+    card.innerHTML = '<div class="q-n">第 ' + (i+1) + ' 问</div>' +
+      '<div class="q-t">' + esc(Q.t) + '</div>' +
+      '<div class="quote"><span class="lb">草案里是这么写的</span>' + esc(Q.quote) + '</div>' +
+      '<div class="why"><b>为什么这是个真问题：</b>' + esc(Q.why) + '</div>';
+
+    const box = el('div','opts');
+    Q.opts.forEach(function(o){
+      const d = el('div','opt' + (answerOf(Q.id)===o.k ? ' on' : ''));
+      d.setAttribute('data-opt', Q.id + ':' + o.k);
+      let inner = '<div class="opt-top"><div class="tick"></div>' +
+        (o.rec ? '<span class="rec">我们推荐</span>' : '') +
+        '<div class="l">' + esc(o.l) + '</div></div>';
+      if (o.d) inner += '<div class="d">' + esc(o.d) + '</div>';
+      if (o.good) inner += '<div class="gg"><span class="tag g">好处</span><span class="txt">' + esc(o.good) + '</span></div>';
+      if (o.bad)  inner += '<div class="gg"><span class="tag b">代价</span><span class="txt">' + esc(o.bad) + '</span></div>';
+      d.innerHTML = inner;
+      d.addEventListener('click', function(){
+        if (answerOf(Q.id) === o.k) { delete state.answers[Q.id]; }
+        else { state.answers[Q.id] = o.k; }
+        save(); renderQuestions(); updateBar();
+      });
+      box.appendChild(d);
+    });
+    card.appendChild(box);
+
+    const ta = document.createElement('textarea');
+    ta.id = 'note-' + Q.id;
+    ta.setAttribute('data-note', Q.id);
+    ta.placeholder = '想说什么都行（选填）——不同意某个方案、想加一个条件、或者觉得这块根本不对';
+    ta.value = state.notes[Q.id] || '';
+    ta.addEventListener('input', function(){ state.notes[Q.id] = ta.value; save(); updateBar(); });
+    card.appendChild(ta);
+
+    app.appendChild(card);
+  });
+
+  const n = q('who');
+  if (n) n.addEventListener('input', function(){ state.name = n.value; save(); });
+
+  const r = el('div'); r.id = 'result';
+  r.innerHTML = '<h3>你的回答</h3>' +
+    '<p style="color:var(--mut);font-size:14px;margin:0 0 10px">点「复制」整段发给他就好。手机如果复制没反应，点「全选文字」再长按拷贝。</p>' +
+    '<textarea id="out" readonly></textarea>' +
+    '<div class="r-btns">' +
+      '<button class="b-main" id="copy">复制</button>' +
+      '<button class="b-ghost" id="dl">下载成 txt</button>' +
+      '<span class="copied" id="copied"></span>' +
+    '</div>';
+  app.parentNode.insertBefore(r, document.querySelector('footer'));
+  updateBar();
+}
+
+function updateBar(){
+  let done = 0;
+  QS.forEach(function(Q){
+    if (answerOf(Q.id) || (state.notes[Q.id]||'').trim()) done++;
+  });
+  const pct = Math.round(done / QS.length * 100);
+  q('fill').style.width = pct + '%';
+  q('cnt').textContent = done + ' / ' + QS.length;
+  const h = q('hint');
+  if (h) h.textContent = done===0 ? '答完之后，把结果发给他就行'
+    : (done < QS.length ? '答到哪算哪，随时可以生成' : '答完啦，点左边生成');
+}
+
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if (raw){ const d = JSON.parse(raw);
+      if (d.name) state.name = d.name;
+      if (d.answers) state.answers = d.answers;
+      if (d.notes) state.notes = d.notes;
+    }
+  }catch(e){}
+}
+
+function build(){
+  const d = new Date();
+  const p = function(n){ return String(n).padStart(2,'0'); };
+  let out = '【玩法设定 V1.0 · 我的回答】\n';
+  out += '时间：' + d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + '\n';
+  if (state.name.trim()) out += '名字：' + state.name.trim() + '\n';
+  out += '————————————————\n\n';
+  QS.forEach(function(Q, i){
+    const a = answerOf(Q.id);
+    const nt = (state.notes[Q.id] || '').trim();
+    out += '第 ' + (i+1) + ' 问 · ' + Q.t + '\n';
+    out += '  → ' + (a ? labelOf(Q.id, a) : '（没选）') + '\n';
+    if (nt) out += '  〔我想说〕' + nt.replace(/\s*\n\s*/g, ' ／ ') + '\n';
+    out += '\n';
+  });
+  out += '————————————————\n（把这段整段发给他就行）\n';
+  return out;
+}
+
+q('gen').addEventListener('click', function(){
+  q('out').value = build();
+  q('result').style.display = 'block';
+  q('result').scrollIntoView({behavior:'smooth', block:'start'});
+  try{ const ta=q('out'); ta.focus({preventScroll:true}); ta.select(); ta.setSelectionRange(0,999999); }catch(e){}
+});
+q('selall').addEventListener('click', function(){
+  const ta=q('out'); if(!ta.value){ q('gen').click(); }
+  try{ ta.focus(); ta.select(); ta.setSelectionRange(0,999999); }catch(e){}
+});
+q('reset').addEventListener('click', function(){
+  if(!confirm('清空所有回答，重新开始？')) return;
+  state.name=''; state.answers={}; state.notes={};
+  try{ localStorage.removeItem(KEY); }catch(e){}
+  renderQuestions();
+});
+document.addEventListener('click', function(e){
+  const id = e.target && e.target.id;
+  if (id === 'copy'){
+    const ta = q('out'); if(!ta.value) q('gen').click();
+    let ok=false;
+    try{ ta.removeAttribute('readonly'); ta.select(); ta.setSelectionRange(0,999999);
+      ok = document.execCommand('copy'); ta.setAttribute('readonly','readonly'); }catch(err){ ok=false; }
+    if (!ok && navigator.clipboard){
+      navigator.clipboard.writeText(ta.value).then(function(){ q('copied').textContent='已复制'; })
+        .catch(function(){ q('copied').textContent='请点「全选文字」再长按拷贝'; });
+    } else { q('copied').textContent = ok ? '已复制' : '请点「全选文字」再长按拷贝'; }
+    setTimeout(function(){ q('copied').textContent=''; }, 2800);
+  }
+  if (id === 'dl'){
+    const blob = new Blob(['\ufeff' + q('out').value], {type:'text/plain;charset=utf-8'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '我的回答.txt';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+});
+
+load();
+renderQuestions();
+</script>
+</body>
+</html>
